@@ -29,6 +29,22 @@ class RetrievalTests(TestCase):
             text, sources = rag.answer_question(self.user, [], "حداکثر حجم چیست؟ به انگلیسی جواب بده")
         self.assertEqual((text, sources), (rag.ABSTAIN["en"], []))
 
+    def test_greeting_with_an_empty_library(self):
+        answer, sources = rag.answer_question(self.user, [], "سلام!")
+        self.assertTrue(answer.startswith("سلام"))
+        self.assertEqual(sources, [])
+
+    def test_overview_uses_different_owned_documents(self):
+        self.add_chunk(self.owned, "Pilot instructions")
+        second = Document.objects.create(owner=self.user, title="گزارش")
+        self.add_chunk(second, "Archive handover")
+        self.add_chunk(self.other, "Private note")
+        plan = rag.SearchPlan(intent="overview", standalone="library", alternative="books", language="fa")
+        with patch.object(rag, "_invoke", side_effect=[plan, ("مرور", [])]) as invoke:
+            rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
+        excerpts = invoke.call_args.args[1]["excerpts"]
+        self.assertEqual({entry["title"] for entry in excerpts}, {self.owned.title, second.title})
+
     def test_followup_is_retrieved_again_and_only_current_evidence_can_be_cited(self):
         private = self.add_chunk(self.other, "PRIVATE-DOC-1 handles 81 MB.")
         first = self.add_chunk(self.owned, "Alfba handles scanned documents.")

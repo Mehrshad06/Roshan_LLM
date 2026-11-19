@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}ثبت‌نام در سندیار{% endblock %}
+{% block content %}
+<main class="login-page"><section class="login-card">
+  <h1>ساخت حساب در سندیار</h1>
+  <p>با حساب خودت می‌توانی سند بارگذاری کنی و درباره‌اش بپرسی.</p>
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      {{ field.label_tag }} {{ field }} {{ field.errors }}
+    {% endfor %}
+    <button class="primary-button login-submit" type="submit">ساخت حساب</button>
+  </form>
+  <p>قبلاً ثبت‌نام کرده‌ای؟ <a href="{% url 'login' %}">ورود</a></p>
+</section></main>
+{% endblock %}
