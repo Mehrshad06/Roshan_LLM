@@ -1,0 +1,60 @@
+from django.conf import settings
+from django.db import models
+
+
+class Document(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField("عنوان", max_length=240)
+    filename = models.CharField("نام فایل", max_length=255)
+    text = models.TextField("متن کامل")
+    created_at = models.DateTimeField("زمان ایجاد", auto_now_add=True)
+    updated_at = models.DateTimeField("آخرین تغییر", auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+        verbose_name = "سند"
+        verbose_name_plural = "اسناد"
+
+    def __str__(self):
+        return self.title
+
+
+class Chunk(models.Model):
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
+    position = models.PositiveIntegerField()
+    location = models.CharField(max_length=255)
+    text = models.TextField()
+    vector = models.JSONField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["document", "position"], name="unique_chunk_position")]
+
+
+class Conversation(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField("عنوان", max_length=160, default="گفت‌وگوی جدید")
+    created_at = models.DateTimeField("زمان ایجاد", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-id"]
+        verbose_name = "گفت‌وگو"
+        verbose_name_plural = "گفت‌وگوها"
+
+    def __str__(self):
+        return self.title
+
+
+class Turn(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="turns")
+    question = models.TextField("پرسش")
+    answer = models.TextField("پاسخ")
+    sources = models.JSONField("شواهد", default=list)
+    created_at = models.DateTimeField("زمان ایجاد", auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "پرسش و پاسخ"
+        verbose_name_plural = "پرسش‌ها و پاسخ‌ها"
+
+    def __str__(self):
+        return self.question[:80]

@@ -1,0 +1,5 @@
+یادداشت خصوصی بازبین
+
+[داده آزمایشی / Test Data] شناسهٔ پیگیری خصوصی بازبین CEDAR-819 است.
+
+[داده آزمایشی / Test Data] The reviewer's private tracking code is CEDAR-819.

@@ -1,0 +1,16 @@
+{% load static %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#174b46">
+  <link rel="stylesheet" href="{% static 'app/workspace.css' %}">
+  <title>{% block title %}سندیار{% endblock %}</title>
+</head>
+<body>
+  {% include "icons.html" %}
+  {% block content %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

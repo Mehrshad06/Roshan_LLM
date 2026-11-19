@@ -1,0 +1,9 @@
+.env
+.git
+data
+staticfiles
+**/__pycache__
+**/*.pyc
+.venv
+docs/screenshots
+پروژه LLM.pdf

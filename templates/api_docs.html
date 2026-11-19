@@ -1,0 +1,17 @@
+<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مستندات API روشن</title>
+<style>body{font:16px/1.9 Tahoma,sans-serif;color:#163e38;background:#f7faf8;margin:0}main{max-width:850px;margin:3rem auto;padding:2rem;background:white;border:1px solid #ccdcd5;border-radius:15px}table{border-collapse:collapse;width:100%}td,th{padding:.6rem;text-align:start;border-bottom:1px solid #dedede}code,pre{direction:ltr;unicode-bidi:isolate;display:inline-block}pre{display:block;text-align:left;padding:1rem;background:#eaf2ee;overflow:auto}a{color:#176d55}</style>
+<main><a href="/">بازگشت به کتابخانه</a><h1>مستندات API</h1>
+<p>در مرورگر از نشست Django و هدر <code>X-CSRFToken</code> برای نوشتن استفاده کنید. برای آزمایش محلی با خط فرمان، نام کاربری و رمز را با HTTP Basic بفرستید. همهٔ مسیرها مخصوص کاربر واردشده‌اند.</p>
+<table><thead><tr><th>متد و مسیر</th><th>کاربرد</th></tr></thead><tbody>
+<tr><td><code>GET /api/documents/?search=...</code></td><td>فهرست و جست‌وجو در عنوان، نام فایل و متن</td></tr>
+<tr><td><code>POST /api/documents/</code></td><td>بارگذاری multipart با file و عنوان اختیاری title</td></tr>
+<tr><td><code>GET /api/documents/{id}/</code></td><td>جزئیات و متن کامل</td></tr>
+<tr><td><code>PATCH /api/documents/{id}/</code></td><td>ویرایش title یا text و به‌روز کردن نمایه</td></tr>
+<tr><td><code>DELETE /api/documents/{id}/</code></td><td>حذف سند و قطعه‌های آن</td></tr>
+<tr><td><code>GET, POST /api/conversations/</code></td><td>فهرست یا ساخت یک گفت‌وگو با بدنهٔ {}</td></tr>
+<tr><td><code>GET, DELETE /api/conversations/{id}/</code></td><td>تاریخچه و شواهد یا حذف گفتگو</td></tr>
+<tr><td><code>POST /api/conversations/{id}/ask/</code></td><td>ثبت پرسش با فیلد question</td></tr>
+</tbody></table><h2>مثال PowerShell</h2>
+<pre>curl.exe -u demo http://localhost:8000/api/documents/</pre>
+<p>پاسخ پرسش شامل <code>answer</code> و فهرست <code>sources</code> است. هر شاهد شناسه و عنوان سند، محل و نقل‌قول دارد. جزئیات درخواست‌ها، نمونهٔ JSON و کدهای خطا در فایل <code>docs/API.md</code> بسته آمده است.</p></main></html>

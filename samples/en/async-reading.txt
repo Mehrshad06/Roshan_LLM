@@ -1,0 +1,5 @@
+Tracking an asynchronous read
+
+An asynchronous Alefba request returns its processing state and task identifiers.
+
+Use the task identifier to fetch the result when processing has finished. This separates submitting an image from retrieving its transcription.

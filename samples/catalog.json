@@ -1,0 +1,114 @@
+[
+  {
+    "path": "fa/alefba-guide.docx",
+    "title": "راهنمای ورودی و خروجی الفبا",
+    "owner": "demo",
+    "language": "fa",
+    "public_source": "https://www.roshan-ai.ir/docs/alefba/"
+  },
+  {
+    "path": "fa/harf-scan.pdf",
+    "title": "تبدیل گفتار با حرف",
+    "owner": "demo",
+    "language": "fa",
+    "public_source": "https://www.roshan-ai.ir/"
+  },
+  {
+    "path": "fa/products.xlsx",
+    "title": "فهرست کاربرد محصولات روشن",
+    "owner": "demo",
+    "language": "fa",
+    "public_source": "https://www.roshan-ai.ir/"
+  },
+  {
+    "path": "fa/fahm-note.txt",
+    "title": "پرسش از سند با فهم",
+    "owner": "demo",
+    "language": "fa",
+    "public_source": "https://www.roshan-ai.ir/"
+  },
+  {
+    "path": "fa/archive.png",
+    "title": "کارت بایگانی تصویری",
+    "owner": "demo",
+    "language": "fa",
+    "public_source": "https://www.roshan-ai.ir/docs/alefba/"
+  },
+  {
+    "path": "en/hazm-guide.docx",
+    "title": "Preparing Persian text with Hazm",
+    "owner": "demo",
+    "language": "en",
+    "public_source": "https://github.com/roshan-research/hazm"
+  },
+  {
+    "path": "en/alefba-response.pdf",
+    "title": "Reading an Alefba response",
+    "owner": "demo",
+    "language": "en",
+    "public_source": "https://www.roshan-ai.ir/docs/alefba/"
+  },
+  {
+    "path": "en/hazm-steps.xlsx",
+    "title": "Hazm processing steps",
+    "owner": "demo",
+    "language": "en",
+    "public_source": "https://github.com/roshan-research/hazm"
+  },
+  {
+    "path": "en/async-reading.txt",
+    "title": "Tracking an asynchronous read",
+    "owner": "demo",
+    "language": "en",
+    "public_source": "https://www.roshan-ai.ir/docs/alefba/"
+  },
+  {
+    "path": "en/token-review.jpg",
+    "title": "Token review card",
+    "owner": "demo",
+    "language": "en",
+    "public_source": "https://github.com/roshan-research/hazm"
+  },
+  {
+    "path": "mixed/alefba-pilot.docx",
+    "title": "پایلوت الفبا برای بایگانی",
+    "owner": "demo",
+    "language": "mixed",
+    "public_source": "https://www.roshan-ai.ir/docs/alefba/"
+  },
+  {
+    "path": "mixed/shift-handover.pdf",
+    "title": "تحویل شیفت بایگانی",
+    "owner": "demo",
+    "language": "mixed",
+    "public_source": null
+  },
+  {
+    "path": "mixed/acceptance.xlsx",
+    "title": "دفتر ثبت آزمون پذیرش",
+    "owner": "demo",
+    "language": "mixed",
+    "public_source": null
+  },
+  {
+    "path": "mixed/search-policy.txt",
+    "title": "دستورالعمل جستجوی بایگانی",
+    "owner": "demo",
+    "language": "mixed",
+    "public_source": null
+  },
+  {
+    "path": "mixed/transfer.jpg",
+    "title": "کارت تحویل بسته",
+    "owner": "demo",
+    "language": "mixed",
+    "public_source": null
+  },
+  {
+    "path": "private/reviewer-note.txt",
+    "title": "یادداشت خصوصی بازبین",
+    "owner": "reviewer",
+    "language": "mixed",
+    "public_source": null
+  }
+]

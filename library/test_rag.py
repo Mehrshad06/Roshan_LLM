@@ -1,0 +1,93 @@
+import json
+import os
+from unittest.mock import patch
+
+import numpy as np
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from langchain_core.runnables import RunnableLambda
+
+from . import rag
+from .models import Chunk, Conversation, Document
+
+
+class RetrievalTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_superuser("alice", password="unused")
+        other = get_user_model().objects.create_user("bob")
+        self.owned = Document.objects.create(owner=self.user, title="Alfba manual")
+        self.other = Document.objects.create(owner=other, title="Another customer's manual")
+        self.conversation = Conversation.objects.create(owner=self.user)
+
+    def add_chunk(self, document, text, position=0, vector=(1, 0)):
+        return Chunk.objects.create(document=document, position=position, text=text,
+                                    location=f"Page {position + 1}", vector=list(vector))
+
+    def test_superuser_with_empty_library_abstains_in_requested_language(self):
+        self.add_chunk(self.other, "PRIVATE-DOC-1 handles 81 MB.")
+        with patch("library.rag.ChatOpenAI", side_effect=AssertionError("unexpected LLM call")):
+            text, sources = rag.answer_question(self.user, [], "حداکثر حجم چیست؟ به انگلیسی جواب بده")
+        self.assertEqual((text, sources), (rag.ABSTAIN["en"], []))
+
+    def test_followup_is_retrieved_again_and_only_current_evidence_can_be_cited(self):
+        private = self.add_chunk(self.other, "PRIVATE-DOC-1 handles 81 MB.")
+        first = self.add_chunk(self.owned, "Alfba handles scanned documents.")
+        limit = self.add_chunk(self.owned, "The Alfba upload limit is 24 MB.", position=1)
+        previous = self.conversation.turns.create(question="الفبا چیست؟", answer="سامانهٔ بازشناسی متن.")
+        payloads = []
+
+        def reply(prompt):
+            payload = json.loads(prompt.to_messages()[-1].content)
+            payloads.append(payload)
+            if "history" in payload:
+                return json.dumps({"standalone": "What is the Alfba upload limit?",
+                                   "alternative": "سقف حجم الفبا چقدر است؟", "language": "fa"})
+            number = next(row["source"] for row in payload["excerpts"] if row["text"] == limit.text)
+            return json.dumps({"claims": [{"sentence": "The limit is 24 MB.",
+                                           "source": number, "quote": limit.text}]})
+
+        with (patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}),
+              patch("library.rag.ChatOpenAI", return_value=RunnableLambda(reply)),
+              patch("library.rag._vectors", side_effect=lambda qs: np.tile([1, 0], (len(qs), 1)))):
+            answer, sources = rag.answer_question(
+                self.user, [previous], "حجمش چقدر است؟ به انگلیسی جواب بده"
+            )
+        self.assertEqual(answer, "The limit is 24 MB. [1]")
+        self.assertEqual(sources, [{"document_id": self.owned.pk, "title": self.owned.title,
+                                    "location": limit.location, "quote": limit.text}])
+        self.assertEqual(payloads[0]["history"][0]["question"], previous.question)
+        self.assertEqual(payloads[1]["answer_language"], "en")
+        self.assertIn(first.text, [row["text"] for row in payloads[1]["excerpts"]])
+        self.assertNotIn(private.text, str(payloads))
+
+    def test_fabricated_quote_rejected_and_fallback_model_can_abstain(self):
+        chunk = self.add_chunk(self.owned, "The Alfba upload limit is 24 MB.")
+        invented = {"claims": [{"sentence": "The limit is 50 MB.", "source": 1, "quote": "50 MB"}]}
+        primary = RunnableLambda(lambda prompt: json.dumps(invented))
+        fallback = RunnableLambda(lambda prompt: '{"claims":[]}')
+        with (patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}),
+              patch("library.rag.ChatOpenAI", side_effect=[primary, fallback])):
+            checked = rag._invoke(rag.GROUND, {}, rag.Answer,
+                                  validate=lambda result: rag._checked_answer(result, [chunk], "fa"))
+        self.assertEqual(checked, (rag.ABSTAIN["fa"], []))
+
+    def test_exact_lexical_hit_with_persian_digits_and_adjacent_context(self):
+        relevant = self.add_chunk(self.owned, "Sample code AB-412.", vector=(0, 1))
+        neighbor = self.add_chunk(self.owned, "This row explains the units.", 1, vector=(0, 1))
+        unrelated = self.add_chunk(self.owned, "Unrelated.", 4, vector=(0, 1))
+        with patch("library.rag._vectors", return_value=np.array([[1, 0]])):
+            result = rag._retrieve([unrelated, neighbor, relevant], ["AB-۴۱۲"])
+        self.assertEqual(result, [relevant, neighbor])
+
+    def test_existing_quote_cannot_support_a_different_numeric_limit(self):
+        chunk = self.add_chunk(self.owned, "سقف بارگذاری ۲۴ مگابایت است.")
+        result = rag.Answer(claims=[rag.Claim(
+            sentence="The upload limit is 42 MB.", source=1, quote=chunk.text
+        )])
+        with self.assertRaises(ValueError):
+            rag._checked_answer(result, [chunk], "en")
+
+    def test_missing_key_reports_service_failure(self):
+        self.add_chunk(self.owned, "Sample")
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}), self.assertRaises(rag.RAGUnavailable):
+            rag.answer_question(self.user, [], "What is the limit?")

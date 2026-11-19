@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}ورود به سندیار{% endblock %}
+{% block content %}
+<main class="login-page">
+  <div class="login-card">
+    <div class="login-brand" aria-label="سندیار"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg></span> سندیار</div>
+    <h1>ورود به فضای کار</h1>
+    <p class="muted">با حساب کاربری خود به اسناد و گفت‌وگوهایتان دسترسی پیدا کنید.</p>
+    <form action="" method="post" class="stack" id="login-form">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      {% if form.errors %}<p role="alert" class="error-box">ورود انجام نشد. نام کاربری و رمز عبور را بررسی کنید.</p>{% endif %}
+      <label for="id_username">نام کاربری</label>
+      <input id="id_username" name="username" dir="auto" maxlength="150" required autocomplete="username" autofocus value="{{ form.username.value|default_if_none:'' }}">
+      <label for="id_password">رمز عبور</label>
+      <input id="id_password" name="password" type="password" dir="auto" required autocomplete="current-password">
+      <button class="primary-button login-submit" type="submit">ورود <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    </form>
+  </div>
+</main>
+{% endblock %}
