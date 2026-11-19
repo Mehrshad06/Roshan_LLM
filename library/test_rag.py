@@ -43,6 +43,25 @@ class RetrievalTests(TestCase):
             _, excerpts = rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
         self.assertEqual({entry["title"] for entry in excerpts}, {self.owned.title, second.title})
 
+    def test_help_and_clock_do_not_search_documents(self):
+        self.add_chunk(self.owned, "A list of project requirements.")
+        with patch.object(rag, "_invoke", side_effect=AssertionError("unexpected model call")):
+            for question, expected in [("what are you doing", "search"), ("what time is it?", "clock")]:
+                answer, sources = rag.answer_question(self.user, [], question)
+                self.assertIn(expected, answer)
+                self.assertEqual(sources, [])
+
+    def test_rate_limit_tries_backup_once_then_reports_capacity(self):
+        class Busy(Exception):
+            status_code = 429
+        def reject(prompt):
+            raise Busy()
+        with (patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}),
+              patch.object(rag, "ChatOpenAI", return_value=RunnableLambda(reject)) as model,
+              self.assertRaisesRegex(rag.RAGUnavailable, "ظرفیت")):
+            rag._invoke(rag.PLAN, {}, rag.SearchPlan)
+        self.assertEqual(model.call_count, 2)
+
     def test_followup_is_retrieved_again_and_only_current_evidence_can_be_cited(self):
         private = self.add_chunk(self.other, "PRIVATE-DOC-1 handles 81 MB.")
         first = self.add_chunk(self.owned, "Alfba handles scanned documents.")

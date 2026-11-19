@@ -1,6 +1,7 @@
 """The document QA pipeline: split, embed, rewrite, retrieve, then cite."""
 
 import json
+import logging
 import math
 import os
 import re
@@ -181,7 +182,8 @@ def _invoke(instructions, payload, schema, validate=None):
         ("system", "{instructions}\nReturn only valid JSON.\n{format}"),
         ("human", "{payload}"),
     ]).partial(instructions=instructions, format=parser.get_format_instructions())
-    chains = []
+    logger = logging.getLogger(__name__)
+    inputs = {"payload": json.dumps(payload, ensure_ascii=False)}
     for model in models:
         if not (model.endswith(":free") or model == "openrouter/free"):
             raise RAGUnavailable("برای مدل اصلی و جایگزین یک مدل رایگان OpenRouter تنظیم کنید.")
@@ -190,15 +192,25 @@ def _invoke(instructions, payload, schema, validate=None):
             temperature=0, max_retries=0, timeout=35, max_tokens=1800,
         )
         chain = prompt | chat | parser
-        chains.append(chain | RunnableLambda(validate) if validate else chain)
-    try:
-        return chains[0].with_fallbacks(chains[1:]).invoke(
-            {"payload": json.dumps(payload, ensure_ascii=False)}
-        )
-    except Exception as exc:
-        raise RAGUnavailable(
-            "مدل پاسخ معتبری نداد. دسترسی OpenRouter، سهمیه و تنظیمات مدل‌ها را بررسی کنید."
-        ) from exc
+        if validate:
+            chain = chain | RunnableLambda(validate)
+        try:
+            return chain.invoke(inputs)
+        except Exception as exc:
+            status = getattr(exc, "status_code", None)
+            logger.warning("OpenRouter stage=%s model=%s status=%s error=%s",
+                           schema.__name__, model, status, type(exc).__name__)
+            if status == 401:
+                raise RAGUnavailable("کلید OpenRouter پذیرفته نشد. مقدار و تاریخ انقضای کلید را بررسی کنید.") from exc
+            if status == 429:
+                reason = "ظرفیت یا سهمیهٔ مدل رایگان موقتاً کافی نیست. کمی بعد دوباره بفرستید."
+            elif status in (502, 503, 504) or isinstance(exc, (TimeoutError, ConnectionError)) or type(exc).__name__ in {"APITimeoutError", "APIConnectionError"}:
+                reason = "ارتباط با سرویس مدل برقرار نشد یا زمان پاسخ طولانی شد. دوباره تلاش کنید."
+            elif status:
+                reason = f"سرویس مدل درخواست را با کد {status} رد کرد. تنظیمات و دسترسی مدل را بررسی کنید."
+            else:
+                reason = "مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید."
+    raise RAGUnavailable(reason)
 
 
 def _explicit_language(text):
@@ -264,6 +276,15 @@ def _checked_answer(result, chunks, language, no_evidence=""):
 
 def answer_question(user, turns, question):
     greeting = " ".join(_tokens(question))
+    if greeting in {"what are you doing", "what can you do", "how can you help", "help",
+                    "چه کار می کنی", "چیکار می کنی", "چه کمکی می کنی", "راهنما"}:
+        if _default_language(question) == "en":
+            return "I can search your documents, show where an answer comes from, or give you a library overview. Which would you like?", []
+        return "می‌توانم سندهایت را معرفی کنم یا جواب یک پرسش را همراه با جملهٔ پشتیبان پیدا کنم. از کدام شروع کنیم؟", []
+    if greeting in {"what time is it", "what is the time", "ساعت چنده", "الان ساعت چنده"}:
+        if _default_language(question) == "en":
+            return "For your current local time, check your device clock. I can look up a time recorded in one of your documents.", []
+        return "برای ساعت محلی، ساعت دستگاهت را ببین. اگر منظورت زمان ثبت‌شده در یک سند است، بگو کدام رویداد را پیدا کنم.", []
     if greeting in {"سلام", "درود", "سلام وقت بخیر", "سلام خوبی", "hi", "hello", "hey"}:
         if _default_language(question) == "en":
             return "Hello! Which document would you like to explore? I can also give you an overview of your library.", []
