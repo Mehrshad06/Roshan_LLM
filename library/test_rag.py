@@ -39,10 +39,8 @@ class RetrievalTests(TestCase):
         second = Document.objects.create(owner=self.user, title="گزارش")
         self.add_chunk(second, "Archive handover")
         self.add_chunk(self.other, "Private note")
-        plan = rag.SearchPlan(intent="overview", standalone="library", alternative="books", language="fa")
-        with patch.object(rag, "_invoke", side_effect=[plan, ("مرور", [])]) as invoke:
-            rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
-        excerpts = invoke.call_args.args[1]["excerpts"]
+        with patch.object(rag, "_invoke", side_effect=AssertionError("unneeded model call")):
+            _, excerpts = rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
         self.assertEqual({entry["title"] for entry in excerpts}, {self.owned.title, second.title})
 
     def test_followup_is_retrieved_again_and_only_current_evidence_can_be_cited(self):

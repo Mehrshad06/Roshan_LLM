@@ -276,6 +276,11 @@ def answer_question(user, turns, question):
         return ABSTAIN[_default_language(question)], []
 
     def rewrite(payload):
+        normalized = " ".join(_tokens(question))
+        if re.fullmatch(r"(?:این ها |این |اینها )?(?:اسناد|سندها|فایل ها) (?:من |من درباره |درباره )?"
+                        r"(?:چه چیز هایی|چه چیزهایی|چه موضوعاتی|چی) (?:هست|هستن|هستند|است|اند)", normalized):
+            return SearchPlan(intent="overview", standalone=question, alternative=question,
+                              language=_default_language(question))
         return _invoke(PLAN, payload, SearchPlan)
 
     def retrieve(plan):
@@ -293,6 +298,15 @@ def answer_question(user, turns, question):
     def respond(search_result):
         plan, context = search_result
         language = _explicit_language(question) or plan.language.lower()
+        if plan.intent == "overview" and language in ABSTAIN:
+            # Titles and verbatim excerpts give a dependable catalog even when
+            # the free model is busy. The user can open each cited document.
+            heading = ("در کتابخانه‌ات این سندها را می‌بینم:" if language == "fa"
+                       else "Your library contains these documents:")
+            sources = [{"document_id": c.document_id, "title": c.document.title,
+                        "location": c.location, "quote": c.text[:190].rstrip()} for c in context]
+            lines = [f"• {s['title']} [{i}]" for i, s in enumerate(sources, 1)]
+            return "\n".join([heading, *lines]), sources
         if not context:
             return ABSTAIN.get(language, plan.no_evidence or ABSTAIN["en"]), []
         excerpts = [
