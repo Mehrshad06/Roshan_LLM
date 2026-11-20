@@ -233,3 +233,9 @@ dialog::backdrop { background: #162c28a3; }
   .date-cell { font-size: .7rem; }
   .dialog-body, .dialog-head, .dialog-footer { padding-inline: 15px; }
 }
+.source {display:grid; grid-template-columns:auto 1fr; gap:.15rem .5rem; padding:.65rem; border:1px solid #d2e1d9; border-radius:.75rem; background:#f8fbf9}
+.source small,.source blockquote {grid-column:2}
+.citation-number {border-radius:50%; background:#dbebe2; color:#174b46; min-width:1.5rem; height:1.5rem; text-align:center}
+.turn-edit {color:var(--green); background:transparent; padding:.25rem; font-size:.78rem; text-decoration:underline}
+.document-text:has(mark) {white-space:pre-wrap}
+.evidence-highlight {background:#ffe198; border-radius:.2rem}

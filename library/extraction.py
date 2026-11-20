@@ -9,6 +9,7 @@ from zipfile import ZipFile
 
 import pymupdf
 from docx import Document as WordDocument
+from docx.oxml.ns import qn
 from docx.table import Table
 from openpyxl import load_workbook
 from PIL import Image, ImageOps
@@ -69,6 +70,16 @@ def _pdf(data):
                     text = recognized if text in recognized else (text + "\n" + recognized).strip()
                     location += " · OCR"
             yield location, unicodedata.normalize("NFKC", text)
+            if text and "OCR" not in location and not has_large_scan:
+                # A slide can contain selectable text beside a scanned table.
+                words = page.get_text("words")
+                for index, info in enumerate(page.get_image_info(), 1):
+                    box = pymupdf.Rect(info["bbox"]) & page.rect
+                    if box.width < 24 or box.height < 12 or any(box.contains(pymupdf.Rect(w[:4])) for w in words):
+                        continue
+                    scale = min(3, 4096 / max(box.width, box.height))
+                    pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), clip=box, alpha=False)
+                    yield f"{location} · Image {index} · OCR", _ocr(Image.frombytes("RGB", (pix.width, pix.height), pix.samples))
 
 
 def _word_content(container):
@@ -76,8 +87,16 @@ def _word_content(container):
         if isinstance(item, Table):
             for row in item.rows:
                 yield " | ".join(" ".join(_word_content(cell)) for cell in row.cells)
-        elif item.text.strip():
-            yield item.text
+        else:
+            if item.text.strip():
+                yield item.text
+            for blip in item._p.xpath(".//a:blip"):
+                part = item.part.related_parts.get(blip.get(qn("r:embed")))
+                if part and part.content_type in {"image/png", "image/jpeg", "image/tiff", "image/bmp"}:
+                    with Image.open(BytesIO(part.blob)) as image:
+                        text = _ocr(image)
+                        if text:
+                            yield text
 
 
 def _docx(data):

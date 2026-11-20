@@ -181,6 +181,10 @@ For other languages, fill no_evidence with a translation of 'I could not find en
 information in your documents to answer this question.'"""
 
 GROUND = """Respond as a friendly tutor. Start with a direct answer in everyday language.
+For a document summary, explain the actual subject and the useful facts together.
+Do not turn a test-data label into the main point. OCR may contain garbled words:
+use a clear sentence elsewhere in the passage (including its other language) when
+it supports the fact. Do not guess missing words or treat OCR noise as an entity.
 For broad questions give a coherent overview in 3 to 6 claims: the goal, what to build,
 what to submit, and any stated timing. Group related requirements supported by the same
 short passage. Never exceed 8 claims. For a narrow question get to the point. Address each supported
@@ -329,6 +333,15 @@ def answer_question(user, turns, question):
     chunks = owned_chunks(user)
     if not chunks:
         return ABSTAIN[_default_language(question)], []
+    # A summary of a named file should draw from that file throughout both
+    # retrieval passes. Keep all expressly named titles for comparisons.
+    normalized = " " + " ".join(_tokens(question)) + " "
+    named = set()
+    if re.search(r"خلاصه|جمع بندی|summari[sz]e|summary", normalized):
+        titles = {c.document.title for c in chunks}
+        named = {title for title in titles if " " + " ".join(_tokens(title)) + " " in normalized}
+        if named:
+            chunks = [c for c in chunks if c.document.title in named]
 
     def rewrite(payload):
         normalized = " ".join(_tokens(question))
@@ -344,6 +357,8 @@ def answer_question(user, turns, question):
     def retrieve(plan):
         if plan.intent == "social":
             return plan, []
+        if named and len(chunks) <= 16:
+            return plan.model_copy(update={"intent": "lookup"}), chunks
         if plan.intent == "overview":
             # Give each document a voice instead of ranking a broad question
             # against chunks that may all belong to a single document.

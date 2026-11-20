@@ -5,6 +5,8 @@ const conversationsUrl = "/api/conversations/";
 const storageKey = "sandyar.conversation." + document.querySelector(".shell").dataset.userId;
 let current = null;
 let pending = false;
+let generating = null;
+let editing = null;
 
 function remember(id) {
   try { localStorage.setItem(storageKey, String(id)); } catch { /* Storage is optional. */ }
@@ -29,18 +31,21 @@ function sourceList(sources) {
   const details = element("details", "sources");
   details.open = true;
   details.append(element("summary", "", "منابع پاسخ (" + faNumber.format(sources.length) + ")"));
-  for (const item of sources) {
+  for (const [index, item] of sources.entries()) {
     const source = element("div", "source");
     const title = element("button", "", item.title);
     title.type = "button";
     title.dir = "auto";
     title.title = "مشاهدهٔ سند منبع";
-    title.addEventListener("click", () => openDocument(item.document_id));
-    const location = element("small", "", item.location);
+    title.addEventListener("click", () => openDocument(item.document_id, item.quote));
+    const location = element("small", "", item.location.replace(/^Page (\d+)/, "صفحهٔ $1")
+      .replace("Document body", "متن اصلی سند").replace(" · Row ", " · ردیف "));
     location.dir = "auto";
     const quote = element("blockquote", "", item.quote);
     quote.dir = "auto";
-    source.append(title, location, quote);
+    source.append(element("span", "citation-number", faNumber.format(index + 1)), title, location);
+    if (item.filename) source.append(element("small", "source-file", item.filename));
+    source.append(quote);
     details.append(source);
   }
   return details;
@@ -58,7 +63,20 @@ function message(role, text, sources = []) {
 function renderTurns(turns) {
   const nodes = [];
   for (const turn of turns) {
-    nodes.push(message("user", turn.question), message("assistant", turn.answer, turn.sources));
+    const userMessage = message("user", turn.question);
+    if (turn === turns.at(-1)) {
+      const edit = element("button", "turn-edit", "ویرایش پیام");
+      edit.type = "button";
+      edit.onclick = () => {
+        if (pending) return;
+        editing = turn.id;
+        byId("edit-notice").hidden = false;
+        byId("question").value = turn.question;
+        byId("question").focus();
+      };
+      userMessage.append(edit);
+    }
+    nodes.push(userMessage, message("assistant", turn.answer, turn.sources));
   }
   byId("messages").replaceChildren(...nodes);
   byId("chat-welcome").hidden = turns.length > 0;
@@ -66,6 +84,8 @@ function renderTurns(turns) {
 }
 
 function selectConversation(record) {
+  editing = null;
+  byId("edit-notice").hidden = true;
   current = record;
   byId("conversation-title").textContent = record?.title || "گفت‌وگوی جدید";
   byId("conversation-title").dir = "auto";
@@ -131,16 +151,26 @@ async function ask(event) {
       current.turns = [];
       remember(current.id);
     }
-    const turn = await api(conversationsUrl + current.id + "/ask/", "POST", {question});
+    const base = conversationsUrl + current.id + "/";
+    generating = new AbortController();
+    byId("cancel-answer").hidden = false;
+    const preview = await api(base + "preview/", "POST", {question, replace_id: editing}, generating.signal);
+    generating = null;
+    byId("cancel-answer").hidden = true;
+    const turn = await api(base + "confirm/", "POST", {ticket: preview.ticket});
+    if (editing) current.turns.pop();
+    editing = null;
+    byId("edit-notice").hidden = true;
     current.turns.push(turn);
     if (current.turns.length === 1) byId("conversation-title").textContent = question;
-    waiting.replaceWith(message("assistant", turn.answer, turn.sources));
-    scrollToLatest();
+    renderTurns(current.turns);
   } catch (err) {
     input.value = question;
     renderTurns(current?.turns || []);
-    showError("chat-error", err.message);
+    if (err.name !== "AbortError") showError("chat-error", err.message);
   } finally {
+    generating = null;
+    byId("cancel-answer").hidden = true;
     setPending(false);
     input.focus();
   }
@@ -162,6 +192,13 @@ async function restoreConversation() {
 }
 
 export function initChat() {
+  byId("cancel-answer").onclick = () => generating?.abort();
+  byId("discard-edit").onclick = () => {
+    if (pending) return;
+    editing = null;
+    byId("edit-notice").hidden = true;
+    byId("question").value = "";
+  };
   byId("history").addEventListener("click", showHistory);
   byId("new-chat").addEventListener("click", () => {
     selectConversation(null);

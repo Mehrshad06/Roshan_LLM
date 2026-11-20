@@ -53,22 +53,40 @@ def create_document(owner, title, upload):
     return store_document(document, prepare_upload(upload), is_new=True)
 
 
-def ask(user, conversation, question):
+def prepare_answer(user, conversation, question, replace_id=None):
     if conversation.owner_id != user.pk:
         raise Conversation.DoesNotExist
     history = list(reversed(list(conversation.turns.order_by("-pk")[:6])))
-    answer, sources = rag.answer_question(user, history, question)
+    latest = history[-1].pk if history else None
+    if replace_id is not None and latest != replace_id:
+        raise Conflict("فقط آخرین پیام گفت‌وگو قابل ویرایش است.")
+    answer, sources = rag.answer_question(user, history[:-1] if replace_id else history, question)
+    filenames = dict(Document.objects.filter(owner=user, pk__in=[s["document_id"] for s in sources])
+                     .values_list("pk", "filename"))
+    sources = [dict(s, filename=filenames.get(s["document_id"], "")) for s in sources]
+    return dict(user_id=user.pk, conversation_id=conversation.pk, latest=latest, replace_id=replace_id,
+                question=question, answer=answer, sources=sources)
+
+
+def save_answer(user, conversation, draft):
+    if (draft["user_id"], draft["conversation_id"]) != (user.pk, conversation.pk):
+        raise Conflict("پاسخ به این گفت‌وگو تعلق ندارد.")
+    question, answer, sources = draft["question"], draft["answer"], draft["sources"]
     with transaction.atomic():
         current = Conversation.objects.filter(pk=conversation.pk, owner=user).first()
-        if not current or current.turns.order_by("-pk").values_list("pk", flat=True).first() != (
-            history[-1].pk if history else None
-        ):
+        if not current or current.turns.order_by("-pk").values_list("pk", flat=True).first() != draft["latest"]:
             raise Conflict("این گفت‌وگو تغییر کرد. آن را باز کنید و پرسش را دوباره بفرستید.")
         for source in sources:
             if not Chunk.objects.filter(document__owner=user, document_id=source["document_id"],
                                         location=source["location"], text__contains=source["quote"]).exists():
                 raise Conflict("سند منبع تغییر کرده است. پرسش را دوباره بفرستید.")
-        if not history:
+        if draft["replace_id"]:
+            current.turns.filter(pk=draft["replace_id"]).delete()
+        if not current.turns.exists():
             current.title = question[:100]
             current.save(update_fields=["title"])
         return current.turns.create(question=question, answer=answer, sources=sources)
+
+
+def ask(user, conversation, question):
+    return save_answer(user, conversation, prepare_answer(user, conversation, question))

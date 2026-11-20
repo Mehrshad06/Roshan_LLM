@@ -4,7 +4,7 @@ let documents = [];
 let searchRequest;
 let currentDocument = null;
 let detailRequest;
-const uploadPrompt = "فایل را انتخاب کنید یا اینجا رها کنید";
+const uploadPrompt = "یک یا چند فایل را انتخاب کنید یا اینجا رها کنید";
 
 function fileInfo(filename) {
   const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
@@ -100,7 +100,7 @@ function renderDetail(doc) {
   setEditMode("read");
 }
 
-export async function openDocument(id) {
+export async function openDocument(id, quote = "") {
   const dialog = byId("detail-dialog");
   detailRequest?.abort();
   detailRequest = new AbortController();
@@ -115,6 +115,16 @@ export async function openDocument(id) {
   try {
     const doc = await api("/api/documents/" + id + "/", "GET", undefined, detailRequest.signal);
     renderDetail(doc);
+    if (quote) {
+      const start = doc.text.indexOf(quote);
+      if (start >= 0 && doc.text.indexOf(quote, start + 1) === -1) {
+        const mark = element("mark", "evidence-highlight", quote);
+        byId("detail-text").replaceChildren(doc.text.slice(0, start), mark, doc.text.slice(start + quote.length));
+        mark.scrollIntoView({block: "center"});
+      } else {
+        byId("detail-status").textContent = start < 0 ? "متن سند از زمان این پاسخ تغییر کرده است." : "این عبارت در چند جای سند آمده است.";
+      }
+    }
   } catch (err) {
     if (err.name === "AbortError") return;
     byId("detail-text").textContent = "";
@@ -152,20 +162,42 @@ async function changeDocument(method, data) {
 }
 
 function updateFileLabel() {
-  byId("file-label").textContent = byId("upload-file").files[0]?.name || uploadPrompt;
+  const files = [...byId("upload-file").files];
+  byId("file-label").textContent = files.map(file => file.name).join("، ") || uploadPrompt;
+  byId("upload-name").hidden = files.length > 1;
+  document.querySelector("label[for=upload-name]").hidden = files.length > 1;
 }
 
 async function uploadDocument(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const data = new FormData(form);
-  if (!data.get("title").trim()) data.delete("title");
+  const files = [...byId("upload-file").files];
+  const title = files.length === 1 ? byId("upload-name").value.trim() : "";
+  const failed = new DataTransfer();
+  const errors = [];
   busyDialog("upload-dialog", true);
   byId("upload-status").textContent = "در حال استخراج متن و ساخت نمایه…";
   showError("upload-error");
   try {
-    await api("/api/documents/", "POST", data);
-    byId("upload-dialog").close();
+    for (const [index, file] of files.entries()) {
+      byId("upload-status").textContent = faNumber.format(index + 1) + " از " + faNumber.format(files.length) + " · " + file.name;
+      const data = new FormData();
+      data.set("file", file);
+      if (title) data.set("title", title);
+      try {
+        await api("/api/documents/", "POST", data);
+      } catch (err) {
+        failed.items.add(file);
+        errors.push(file.name + " — " + err.message);
+      }
+    }
+    if (errors.length) {
+      byId("upload-file").files = failed.files;
+      if (files.length > 1) byId("upload-name").value = "";
+      updateFileLabel();
+      showError("upload-error", errors.join("\n"));
+    } else {
+      byId("upload-dialog").close();
+    }
     byId("search").value = "";
     byId("file-type").value = "";
     await loadDocuments();

@@ -65,3 +65,28 @@ class ExtractionTests(unittest.TestCase):
                 upload.name = name
                 with self.assertRaises(ValueError):
                     extract_sections(upload)
+
+    def test_native_paragraph_and_embedded_image(self):
+        from docx import Document
+        doc = Document()
+        doc.add_paragraph("Native caption")
+        doc.add_picture(str(SAMPLES / "fa/archive.png"))
+        stream = BytesIO()
+        doc.save(stream)
+        stream.name = "illustrated.docx"
+        with patch("library.extraction._ocr", return_value="Image content"):
+            text = extract_sections(stream)[0]["text"]
+        self.assertIn("Native caption", text)
+        self.assertIn("Image content", text)
+
+    def test_pdf_caption_beside_scan(self):
+        with pymupdf.open() as pdf:
+            page = pdf.new_page(width=430, height=360)
+            page.insert_text((15, 20), "A readable caption outside the image")
+            page.insert_image((10, 45, 420, 350), filename=str(SAMPLES / "fa/archive.png"))
+            stream = BytesIO(pdf.tobytes())
+        stream.name = "captioned.pdf"
+        with patch("library.extraction._ocr", return_value="Archive table"):
+            parts = extract_sections(stream)
+        self.assertIn("caption", parts[0]["text"])
+        self.assertEqual(parts[1], {"location": "Page 1 · Image 1 · OCR", "text": "Archive table"})

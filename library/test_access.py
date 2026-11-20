@@ -112,3 +112,19 @@ class AccessTests(TestCase):
         browser = APIClient(enforce_csrf_checks=True)
         browser.force_login(self.admin)
         self.assertEqual(browser.post("/api/conversations/", {}, format="json").status_code, 403)
+
+    def test_preview_cancel_replace_and_replay(self):
+        chat = Conversation.objects.create(owner=self.admin)
+        url = f"/api/conversations/{chat.pk}/"
+        preview = lambda body: self.api.post(url + "preview/", body, format="json").json()
+        confirm = lambda body: self.api.post(url + "confirm/", body, format="json")
+        old = chat.turns.create(question="Old", answer="Earlier answer")
+        with patch("library.rag.answer_question", return_value=("New answer", [])) as answer:
+            preview({"question": "Accidental"})
+            self.assertEqual(chat.turns.count(), 1)
+            ticket = preview({"question": "Edited", "replace_id": old.pk})
+            self.assertEqual(answer.call_args.args[1], [])
+            self.assertEqual(confirm({"ticket": ticket["ticket"] + "x"}).status_code, 400)
+            self.assertEqual(confirm(ticket).status_code, 201)
+            self.assertEqual(confirm(ticket).status_code, 409)
+            self.assertEqual(list(chat.turns.values_list("question", flat=True)), ["Edited"])

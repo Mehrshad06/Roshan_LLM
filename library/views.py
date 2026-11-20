@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.core import signing
 from django.db.models import Q
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -64,6 +65,24 @@ class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
 
 
 class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
+    @action(detail=True, methods=["post"])
+    def preview(self, request, pk=None):
+        conversation = self.get_object()
+        form = QuestionInput(data=request.data)
+        form.is_valid(raise_exception=True)
+        draft = services.prepare_answer(request.user, conversation, form.validated_data["question"],
+                                        request.data.get("replace_id"))
+        return Response({"ticket": signing.dumps(draft, salt="chat-preview", compress=True)})
+
+    @action(detail=True, methods=["post"])
+    def confirm(self, request, pk=None):
+        conversation = self.get_object()
+        try:
+            draft = signing.loads(str(request.data.get("ticket", "")), salt="chat-preview", max_age=600)
+        except signing.BadSignature as exc:
+            raise ValueError("این پاسخ منقضی یا نامعتبر است. پرسش را دوباره بفرستید.") from exc
+        return Response(TurnOutput(services.save_answer(request.user, conversation, draft)).data, status=201)
+
     def get_queryset(self):
         return Conversation.objects.filter(owner=self.request.user)
 

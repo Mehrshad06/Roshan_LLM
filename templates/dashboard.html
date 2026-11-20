@@ -63,7 +63,7 @@
       </div>
       <div class="composer-wrap">
         <p class="error-box" id="chat-error" role="alert" hidden></p>
-        <form id="ask-form" class="composer">
+        <p id="edit-notice" hidden>ویرایش آخرین پیام <button type="button" id="discard-edit" class="turn-edit">انصراف</button></p><button type="button" id="cancel-answer" class="secondary-button" hidden>لغو ارسال و ویرایش</button><form id="ask-form" class="composer">
           <textarea id="question" rows="2" maxlength="3000" aria-label="متن پرسش" placeholder="پرسش خود را بنویسید…" dir="auto" required></textarea>
           <button type="submit" id="send" class="send-button" title="ارسال پرسش" aria-label="ارسال پرسش"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button>
         </form>
@@ -75,7 +75,7 @@
   <form id="upload-form">
     <div class="dialog-head"><h2 id="upload-title">افزودن سند</h2><button type="button" class="icon-button" data-close aria-label="بستن"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
     <div class="dialog-body">
-      <label class="file-drop" id="file-drop" for="upload-file"><span class="drop-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></span><strong id="file-label">فایل را انتخاب کنید یا اینجا رها کنید</strong><small dir="ltr">DOCX · PDF · XLSX · TXT · PNG · JPG</small><input type="file" name="file" id="upload-file" required accept=".docx,.pdf,.xlsx,.txt,.png,.jpg,.jpeg"></label>
+      <label class="file-drop" id="file-drop" for="upload-file"><span class="drop-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></span><strong id="file-label">یک یا چند فایل را انتخاب کنید یا اینجا رها کنید</strong><small dir="ltr">DOCX · PDF · XLSX · TXT · PNG · JPG</small><input type="file" name="file" id="upload-file" multiple required accept=".docx,.pdf,.xlsx,.txt,.png,.jpg,.jpeg"></label>
       <label class="field-label" for="upload-name">عنوان سند <span class="optional">(اختیاری)</span></label>
       <input type="text" id="upload-name" name="title" maxlength="240" dir="auto" placeholder="پیش‌فرض، نام فایل است">
       <p id="upload-error" class="error-box" role="alert" hidden></p>
