@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.utils.translation import gettext_lazy as gettext
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
@@ -13,9 +14,9 @@ from . import services
 from .models import Conversation, Document, Turn
 from .rag import RAGUnavailable
 
-admin.site.site_header = "روشن | مدیریت کتابخانه"
-admin.site.site_title = "مدیریت روشن"
-admin.site.index_title = "مدیریت حساب و اسناد"
+admin.site.site_header = gettext("روشن | مدیریت کتابخانه")
+admin.site.site_title = gettext("مدیریت روشن")
+admin.site.index_title = gettext("مدیریت حساب و اسناد")
 
 
 class OwnedAdmin(admin.ModelAdmin):
@@ -24,8 +25,8 @@ class OwnedAdmin(admin.ModelAdmin):
 
 
 class DocumentForm(forms.ModelForm):
-    upload = forms.FileField(label="فایل سند", required=False)
-    title = forms.CharField(label="عنوان", max_length=240, required=False)
+    upload = forms.FileField(label=gettext("فایل سند"), required=False)
+    title = forms.CharField(label=gettext("عنوان"), max_length=240, required=False)
 
     class Meta:
         model = Document
@@ -40,12 +41,12 @@ class DocumentForm(forms.ModelForm):
         try:
             if not self.instance.pk:
                 if not upload:
-                    raise forms.ValidationError("فایل سند را انتخاب کنید.")
+                    raise forms.ValidationError(gettext("فایل سند را انتخاب کنید."))
                 self.prepared = services.prepare_upload(upload)
                 data["title"] = data.get("title") or Path(upload.name).stem[:240]
                 self.instance.filename = Path(upload.name).name[:255]
             elif not data.get("title"):
-                self.add_error("title", "عنوان سند را وارد کنید.")
+                self.add_error("title", gettext("عنوان سند را وارد کنید."))
             elif "text" in self.changed_data:
                 self.prepared = services.prepare_edit(data["text"])
         except (ValueError, RAGUnavailable) as exc:
@@ -79,9 +80,9 @@ class ConversationAdmin(OwnedAdmin):
 
 
 class QuestionForm(forms.Form):
-    conversation = forms.ModelChoiceField(label="گفت‌وگو", queryset=Conversation.objects.none(),
-                                          required=False, empty_label="شروع گفت‌وگوی جدید")
-    question = forms.CharField(label="پرسش", max_length=3000, widget=forms.Textarea(attrs={"rows": 3}))
+    conversation = forms.ModelChoiceField(label=gettext("گفت‌وگو"), queryset=Conversation.objects.none(),
+                                          required=False, empty_label=gettext("شروع گفت‌وگوی جدید"))
+    question = forms.CharField(label=gettext("پرسش"), max_length=3000, widget=forms.Textarea(attrs={"rows": 3}))
 
 
 @admin.register(Turn)
@@ -91,7 +92,7 @@ class TurnAdmin(admin.ModelAdmin):
     readonly_fields = ["conversation", "question", "answer", "evidence", "created_at"]
     fields = readonly_fields
 
-    @admin.display(description="شواهد پاسخ")
+    @admin.display(description=gettext("شواهد پاسخ"))
     def evidence(self, obj):
         return "\n\n".join(f'{s["title"]} · {s["location"]}\n{s["quote"]}' for s in obj.sources) or "—"
 
@@ -124,7 +125,7 @@ class TurnAdmin(admin.ModelAdmin):
                 return HttpResponseRedirect(reverse("admin:library_turn_change", args=[turn.pk]))
         return TemplateResponse(request, "admin/question.html", {
             **admin.site.each_context(request), "opts": self.model._meta,
-            "title": "پرسش از اسناد من", "form": form,
+            "title": gettext("پرسش از اسناد من"), "form": form,
         })
 
 
@@ -137,7 +138,7 @@ class AccountAdmin(UserAdmin):
     # Account maintenance never expands document querysets. Deactivation preserves history.
     fieldsets = [
         (None, {"fields": ["username", "first_name", "last_name", "email"]}),
-        ("دسترسی", {"fields": ["is_active", "is_staff", "user_permissions"]}),
+        (gettext("دسترسی"), {"fields": ["is_active", "is_staff", "user_permissions"]}),
     ]
     list_display = ["username", "is_staff", "is_active"]
     list_filter = ["is_active", "is_staff"]

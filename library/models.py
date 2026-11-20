@@ -1,19 +1,20 @@
+from django.utils.translation import gettext_lazy as gettext
 from django.conf import settings
 from django.db import models
 
 
 class Document(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    title = models.CharField("عنوان", max_length=240)
-    filename = models.CharField("نام فایل", max_length=255)
-    text = models.TextField("متن کامل")
-    created_at = models.DateTimeField("زمان ایجاد", auto_now_add=True)
-    updated_at = models.DateTimeField("آخرین تغییر", auto_now=True)
+    title = models.CharField(gettext("عنوان"), max_length=240)
+    filename = models.CharField(gettext("نام فایل"), max_length=255)
+    text = models.TextField(gettext("متن کامل"))
+    created_at = models.DateTimeField(gettext("زمان ایجاد"), auto_now_add=True)
+    updated_at = models.DateTimeField(gettext("آخرین تغییر"), auto_now=True)
 
     class Meta:
         ordering = ["-updated_at", "-id"]
-        verbose_name = "سند"
-        verbose_name_plural = "اسناد"
+        verbose_name = gettext("سند")
+        verbose_name_plural = gettext("اسناد")
 
     def __str__(self):
         return self.title
@@ -32,13 +33,13 @@ class Chunk(models.Model):
 
 class Conversation(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    title = models.CharField("عنوان", max_length=160, default="گفت‌وگوی جدید")
-    created_at = models.DateTimeField("زمان ایجاد", auto_now_add=True)
+    title = models.CharField(gettext("عنوان"), max_length=160, default="گفت‌وگوی جدید")
+    created_at = models.DateTimeField(gettext("زمان ایجاد"), auto_now_add=True)
 
     class Meta:
         ordering = ["-id"]
-        verbose_name = "گفت‌وگو"
-        verbose_name_plural = "گفت‌وگوها"
+        verbose_name = gettext("گفت‌وگو")
+        verbose_name_plural = gettext("گفت‌وگوها")
 
     def __str__(self):
         return self.title
@@ -46,15 +47,15 @@ class Conversation(models.Model):
 
 class Turn(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="turns")
-    question = models.TextField("پرسش")
-    answer = models.TextField("پاسخ")
-    sources = models.JSONField("شواهد", default=list)
-    created_at = models.DateTimeField("زمان ایجاد", auto_now_add=True)
+    question = models.TextField(gettext("پرسش"))
+    answer = models.TextField(gettext("پاسخ"))
+    sources = models.JSONField(gettext("شواهد"), default=list)
+    created_at = models.DateTimeField(gettext("زمان ایجاد"), auto_now_add=True)
 
     class Meta:
         ordering = ["id"]
-        verbose_name = "پرسش و پاسخ"
-        verbose_name_plural = "پرسش‌ها و پاسخ‌ها"
+        verbose_name = gettext("پرسش و پاسخ")
+        verbose_name_plural = gettext("پرسش‌ها و پاسخ‌ها")
 
     def __str__(self):
         return self.question[:80]

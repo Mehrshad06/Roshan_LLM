@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.utils.translation import gettext
 from django.db import transaction
 from langchain_core.runnables import RunnableLambda
 
@@ -17,7 +18,7 @@ MAX_TEXT = extraction.MAX_CHARS
 def prepare_sections(sections):
     text = "\n\n".join(part["text"] for part in sections).strip()
     if not text or len(text) > MAX_TEXT:
-        raise ValueError("متن سند باید بین ۱ تا ۶۰۰٬۰۰۰ نویسه باشد.")
+        raise ValueError(gettext("متن سند باید بین ۱ تا ۶۰۰٬۰۰۰ نویسه باشد."))
     return text, rag.build_chunks(sections)
 
 
@@ -37,7 +38,7 @@ def store_document(document, prepared=None, *, is_new=False):
         if not is_new:
             current = Document.objects.filter(pk=document.pk, owner=document.owner).first()
             if not current or current.updated_at != document.updated_at:
-                raise Conflict("این سند هم‌زمان تغییر کرده است. دوباره آن را باز کنید.")
+                raise Conflict(gettext("این سند هم‌زمان تغییر کرده است. دوباره آن را باز کنید."))
         if prepared is not None:
             document.text, chunks = prepared
         document.save(force_insert=is_new)
@@ -59,7 +60,7 @@ def prepare_answer(user, conversation, question, replace_id=None):
     history = list(reversed(list(conversation.turns.order_by("-pk")[:6])))
     latest = history[-1].pk if history else None
     if replace_id is not None and latest != replace_id:
-        raise Conflict("فقط آخرین پیام گفت‌وگو قابل ویرایش است.")
+        raise Conflict(gettext("فقط آخرین پیام گفت‌وگو قابل ویرایش است."))
     answer, sources = rag.answer_question(user, history[:-1] if replace_id else history, question)
     filenames = dict(Document.objects.filter(owner=user, pk__in=[s["document_id"] for s in sources])
                      .values_list("pk", "filename"))
@@ -70,16 +71,16 @@ def prepare_answer(user, conversation, question, replace_id=None):
 
 def save_answer(user, conversation, draft):
     if (draft["user_id"], draft["conversation_id"]) != (user.pk, conversation.pk):
-        raise Conflict("پاسخ به این گفت‌وگو تعلق ندارد.")
+        raise Conflict(gettext("پاسخ به این گفت‌وگو تعلق ندارد."))
     question, answer, sources = draft["question"], draft["answer"], draft["sources"]
     with transaction.atomic():
         current = Conversation.objects.filter(pk=conversation.pk, owner=user).first()
         if not current or current.turns.order_by("-pk").values_list("pk", flat=True).first() != draft["latest"]:
-            raise Conflict("این گفت‌وگو تغییر کرد. آن را باز کنید و پرسش را دوباره بفرستید.")
+            raise Conflict(gettext("این گفت‌وگو تغییر کرد. آن را باز کنید و پرسش را دوباره بفرستید."))
         for source in sources:
             if not Chunk.objects.filter(document__owner=user, document_id=source["document_id"],
                                         location=source["location"], text__contains=source["quote"]).exists():
-                raise Conflict("سند منبع تغییر کرده است. پرسش را دوباره بفرستید.")
+                raise Conflict(gettext("سند منبع تغییر کرده است. پرسش را دوباره بفرستید."))
         if draft["replace_id"]:
             current.turns.filter(pk=draft["replace_id"]).delete()
         if not current.turns.exists():

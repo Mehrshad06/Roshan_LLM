@@ -1,0 +1,98 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\nLanguage: en\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid " · آخرین ویرایش "
+msgstr " · Last edited "
+
+msgid " · ردیف "
+msgstr " · Row "
+
+msgid " از "
+msgstr " of "
+
+msgid " سند"
+msgstr " documents"
+
+msgid "ارتباط با سرور برقرار نشد. اتصال را بررسی و دوباره تلاش کنید."
+msgstr "Could not reach the server. Check your connection and try again."
+
+msgid "این عبارت در چند جای سند آمده است."
+msgstr "This passage appears more than once."
+
+msgid "در حال استخراج متن و ساخت نمایه…"
+msgstr "Extracting and indexing text…"
+
+msgid "در حال ثبت تغییرات…"
+msgstr "Saving changes…"
+
+msgid "در حال جست‌وجو در اسناد و آماده‌سازی پاسخ…"
+msgstr "Searching your documents and preparing an answer…"
+
+msgid "در حال خواندن تاریخچه…"
+msgstr "Loading history…"
+
+msgid "در حال خواندن متن سند…"
+msgstr "Loading document text…"
+
+msgid "درخواست انجام نشد. دوباره تلاش کنید."
+msgstr "Request failed. Please try again."
+
+msgid "سندی با این جست‌وجو و فیلتر پیدا نشد."
+msgstr "No documents match your search and filters."
+
+msgid "سندیار"
+msgstr "Sanadyar"
+
+msgid "شما"
+msgstr "You"
+
+msgid "صفحهٔ $1"
+msgstr "Page $1"
+
+msgid "عنوان"
+msgstr "Title"
+
+msgid "فایل"
+msgstr "File"
+
+msgid "متن اصلی سند"
+msgstr "Document body"
+
+msgid "متن سند"
+msgstr "Document text"
+
+msgid "متن سند از زمان این پاسخ تغییر کرده است."
+msgstr "The document text has changed since this answer."
+
+msgid "مشاهدهٔ "
+msgstr "View "
+
+msgid "مشاهدهٔ سند"
+msgstr "View document"
+
+msgid "مشاهدهٔ سند منبع"
+msgstr "View source document"
+
+msgid "مشاهدهٔ منبع "
+msgstr "View source "
+
+msgid "منابع پاسخ ("
+msgstr "Sources ("
+
+msgid "هنوز سندی ندارید. برای شروع «افزودن سند» را انتخاب کنید."
+msgstr "Your library is empty. Choose “Add documents” to start."
+
+msgid "هنوز گفت‌وگویی ثبت نشده است."
+msgstr "No conversations yet."
+
+msgid "ویرایش پیام"
+msgstr "Edit message"
+
+msgid "پرسش"
+msgstr "Question"
+
+msgid "گفت‌وگوی جدید"
+msgstr "New conversation"
+
+msgid "یک یا چند فایل را انتخاب کنید یا اینجا رها کنید"
+msgstr "Choose files or drop them here"

@@ -86,18 +86,19 @@ class RetrievalTests(TestCase):
         self.assertEqual({s["location"] for s in sources}, {"Page 1", "Page 6"})
         self.assertNotIn(self.other.pk, [s["document_id"] for s in sources])
 
-    def test_rate_limit_tries_backup_once_then_reports_capacity(self):
+    def test_openrouter_quota_redirects_to_local_model(self):
         from django.core.cache import cache
         self.addCleanup(cache.clear)
         class Busy(Exception):
             status_code = 429
         def reject(prompt):
             raise Busy()
-        with (patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}),
-              patch.object(rag, "ChatOpenAI", return_value=RunnableLambda(reject)) as model,
-              self.assertRaisesRegex(rag.RAGUnavailable, "ظرفیت")):
-            rag._invoke(rag.PLAN, {}, rag.SearchPlan)
-        self.assertEqual(model.call_count, 2)
+        with (patch.dict(os.environ, {"LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": "test-key"}),
+              patch.object(rag, "ChatOpenAI", side_effect=[RunnableLambda(reject), RunnableLambda(reject),
+                  RunnableLambda(lambda prompt: '{"claims": []}')]) as model):
+            self.assertEqual(rag._invoke(rag.GROUND, {}, rag.Answer).claims, [])
+        self.assertEqual(model.call_count, 3)
+        self.assertEqual(model.call_args.kwargs["api_key"], "ollama")
 
     def test_followup_is_retrieved_again_and_only_current_evidence_can_be_cited(self):
         private = self.add_chunk(self.other, "PRIVATE-DOC-1 handles 81 MB.")
@@ -116,7 +117,7 @@ class RetrievalTests(TestCase):
             return json.dumps({"claims": [{"sentence": "The limit is 24 MB.",
                                            "source": number, "quote": limit.text}]})
 
-        with (patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}),
+        with (patch.dict(os.environ, {"LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": "test-key"}),
               patch("library.rag.ChatOpenAI", return_value=RunnableLambda(reply)),
               patch("library.rag._vectors", side_effect=lambda qs: np.tile([1, 0], (len(qs), 1)))):
             answer, sources = rag.answer_question(
@@ -135,7 +136,7 @@ class RetrievalTests(TestCase):
         invented = {"claims": [{"sentence": "The limit is 50 MB.", "source": 1, "quote": "50 MB"}]}
         primary = RunnableLambda(lambda prompt: json.dumps(invented))
         fallback = RunnableLambda(lambda prompt: '{"claims":[]}')
-        with (patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}),
+        with (patch.dict(os.environ, {"LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": "test-key"}),
               patch("library.rag.ChatOpenAI", side_effect=[primary, fallback])):
             checked = rag._invoke(rag.GROUND, {}, rag.Answer,
                                   validate=lambda result: rag._checked_answer(result, [chunk], "fa"))
@@ -173,5 +174,5 @@ class RetrievalTests(TestCase):
 
     def test_missing_key_reports_service_failure(self):
         self.add_chunk(self.owned, "Sample")
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}), self.assertRaises(rag.RAGUnavailable):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": ""}), self.assertRaises(rag.RAGUnavailable):
             rag.answer_question(self.user, [], "What is the limit?")

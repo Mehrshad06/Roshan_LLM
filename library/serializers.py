@@ -1,3 +1,4 @@
+from django.utils.translation import gettext
 from rest_framework import serializers
 
 from .models import Conversation, Document, Turn
@@ -26,7 +27,7 @@ class EditInput(serializers.Serializer):
 
     def validate(self, attrs):
         if not attrs:
-            raise serializers.ValidationError("عنوان یا متن سند را وارد کنید.")
+            raise serializers.ValidationError(gettext("عنوان یا متن سند را وارد کنید."))
         return attrs
 
 

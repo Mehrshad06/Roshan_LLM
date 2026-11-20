@@ -1,0 +1,13 @@
+{% extends "drf_spectacular/swagger_ui.html" %}
+{% load i18n static %}
+{% block head %}{{ block.super }}<link rel="stylesheet" href="{% static 'app/brand.css' %}">{% endblock %}
+{% block body %}
+{% get_current_language as lang %}{% get_current_language_bidi as bidi %}
+<header class="api-header" lang="{{ lang }}" dir="{{ bidi|yesno:'rtl,ltr' }}">
+  <a href="{% url 'dashboard' %}">{% translate "فضای کار سندیار" %}</a>
+  <a href="{% url 'api-guide' %}">{% translate "راهنمای API" %}</a>
+  {% include "language_switch.html" %}
+</header>
+{{ block.super }}
+<script src="{% static 'app/swagger-language.js' %}"></script>
+{% endblock %}

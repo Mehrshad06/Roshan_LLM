@@ -4,7 +4,7 @@ let documents = [];
 let searchRequest;
 let currentDocument = null;
 let detailRequest;
-const uploadPrompt = "یک یا چند فایل را انتخاب کنید یا اینجا رها کنید";
+const uploadPrompt = gettext("یک یا چند فایل را انتخاب کنید یا اینجا رها کنید");
 
 function fileInfo(filename) {
   const extension = filename.includes(".") ? filename.split(".").pop().toLowerCase() : "";
@@ -35,7 +35,7 @@ function documentRow(doc) {
   const action = element("td");
   const open = element("button", "icon-button row-arrow");
   open.type = "button";
-  open.setAttribute("aria-label", "مشاهدهٔ " + doc.title);
+  open.setAttribute("aria-label", gettext("مشاهدهٔ ") + doc.title);
   open.append(icon("arrow"));
   open.addEventListener("click", () => openDocument(doc.id));
   action.append(open);
@@ -50,9 +50,9 @@ function renderDocuments() {
   const empty = byId("library-empty");
   empty.hidden = visible.length > 0;
   empty.textContent = byId("search").value.trim() || filter
-    ? "سندی با این جست‌وجو و فیلتر پیدا نشد."
-    : "هنوز سندی ندارید. برای شروع «افزودن سند» را انتخاب کنید.";
-  byId("doc-count").textContent = faNumber.format(visible.length) + " سند";
+    ? gettext("سندی با این جست‌وجو و فیلتر پیدا نشد.")
+    : gettext("هنوز سندی ندارید. برای شروع «افزودن سند» را انتخاب کنید.");
+  byId("doc-count").textContent = faNumber.format(visible.length) + gettext(" سند");
 }
 
 async function loadDocuments() {
@@ -89,7 +89,7 @@ function renderDetail(doc) {
   currentDocument = doc;
   byId("detail-title").textContent = doc.title;
   const filename = element("bdi", "", doc.filename);
-  byId("detail-meta").replaceChildren(filename, " · آخرین ویرایش " + displayDate(doc.updated_at));
+  byId("detail-meta").replaceChildren(filename, gettext(" · آخرین ویرایش ") + displayDate(doc.updated_at));
   byId("detail-text").replaceChildren(...doc.text.split(/\r?\n\s*\n/).map((part) => {
     const paragraph = element("p", "", part);
     paragraph.dir = "auto";
@@ -106,9 +106,9 @@ export async function openDocument(id, quote = "") {
   detailRequest = new AbortController();
   currentDocument = null;
   setEditMode("read");
-  byId("detail-title").textContent = "مشاهدهٔ سند";
+  byId("detail-title").textContent = gettext("مشاهدهٔ سند");
   byId("detail-meta").textContent = "";
-  byId("detail-text").textContent = "در حال خواندن متن سند…";
+  byId("detail-text").textContent = gettext("در حال خواندن متن سند…");
   byId("start-edit").hidden = true;
   byId("start-delete").hidden = true;
   if (!dialog.open) dialog.showModal();
@@ -122,7 +122,7 @@ export async function openDocument(id, quote = "") {
         byId("detail-text").replaceChildren(doc.text.slice(0, start), mark, doc.text.slice(start + quote.length));
         mark.scrollIntoView({block: "center"});
       } else {
-        byId("detail-status").textContent = start < 0 ? "متن سند از زمان این پاسخ تغییر کرده است." : "این عبارت در چند جای سند آمده است.";
+        byId("detail-status").textContent = start < 0 ? gettext("متن سند از زمان این پاسخ تغییر کرده است.") : gettext("این عبارت در چند جای سند آمده است.");
       }
     }
   } catch (err) {
@@ -144,7 +144,7 @@ async function changeDocument(method, data) {
   if (!currentDocument) return;
   busyDialog("detail-dialog", true);
   showError("detail-error");
-  byId("detail-status").textContent = "در حال ثبت تغییرات…";
+  byId("detail-status").textContent = gettext("در حال ثبت تغییرات…");
   try {
     const result = await api("/api/documents/" + currentDocument.id + "/", method, data);
     if (method === "DELETE") {
@@ -175,11 +175,11 @@ async function uploadDocument(event) {
   const failed = new DataTransfer();
   const errors = [];
   busyDialog("upload-dialog", true);
-  byId("upload-status").textContent = "در حال استخراج متن و ساخت نمایه…";
+  byId("upload-status").textContent = gettext("در حال استخراج متن و ساخت نمایه…");
   showError("upload-error");
   try {
     for (const [index, file] of files.entries()) {
-      byId("upload-status").textContent = faNumber.format(index + 1) + " از " + faNumber.format(files.length) + " · " + file.name;
+      byId("upload-status").textContent = faNumber.format(index + 1) + gettext(" از ") + faNumber.format(files.length) + " · " + file.name;
       const data = new FormData();
       data.set("file", file);
       if (title) data.set("title", title);

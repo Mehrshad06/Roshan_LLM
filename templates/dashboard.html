@@ -1,71 +1,74 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% load static %}
-{% block title %}فضای کار | سندیار{% endblock %}
+{% block title %}{% translate 'فضای کار | سندیار' %}{% endblock %}
+{% block language %}{% endblock %}
 {% block content %}
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="/" aria-label="سندیار، فضای کار"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg></span>سندیار</a>
-    <nav class="main-nav" aria-label="ناوبری اصلی">
-      <a class="current" href="/" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg> فضای کار</a>
-      <a href="/api/docs/"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg> راهنمای API</a>
-      {% if user.is_staff %}<a href="/admin/"><svg class="icon" aria-hidden="true"><use href="#i-admin"/></svg> مدیریت</a>{% endif %}
+    <a class="brand" href="/" aria-label="{% translate 'سندیار، فضای کار' %}"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg></span>{% translate 'سندیار' %}</a>
+    <nav class="main-nav" aria-label="{% translate 'ناوبری اصلی' %}">
+      <a class="current" href="/" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg> {% translate 'فضای کار' %}</a>
+      <a href="/api/docs/"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg> {% translate 'راهنمای API' %}</a>
+      {% if user.is_staff %}<a href="/admin/"><svg class="icon" aria-hidden="true"><use href="#i-admin"/></svg> {% translate 'مدیریت' %}</a>{% endif %}
     </nav>
     <div class="account">
+      {% include "language_switch.html" %}
       <span class="avatar" aria-hidden="true"><svg class="icon"><use href="#i-user"/></svg></span>
       <bdi class="username" title="{{ user.get_username }}">{{ user.get_username }}</bdi>
-      <form action="/accounts/logout/" method="post">{% csrf_token %}<button type="submit" class="icon-button" title="خروج" aria-label="خروج از حساب"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg></button></form>
+      <form action="/accounts/logout/" method="post">{% csrf_token %}<button type="submit" class="icon-button" title="{% translate 'خروج' %}" aria-label="{% translate 'خروج از حساب' %}"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg></button></form>
     </div>
   </div>
 </header>
 <main class="shell" data-user-id="{{ user.pk }}">
-  <h1 class="sr-only">فضای کار سندیار</h1>
-  <div class="mobile-switch" aria-label="بخش‌های فضای کار">
-    <button class="selected" data-pane="library" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg> اسناد</button>
-    <button data-pane="chat" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg> گفت‌وگو</button>
+  <h1 class="sr-only">{% translate 'فضای کار سندیار' %}</h1>
+  <div class="mobile-switch" aria-label="{% translate 'بخش‌های فضای کار' %}">
+    <button class="selected" data-pane="library" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg> {% translate 'اسناد' %}</button>
+    <button data-pane="chat" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg> {% translate 'گفت‌وگو' %}</button>
   </div>
   <div class="workspace" data-visible="library">
     <section id="library" class="library panel" aria-labelledby="library-title">
       <div class="library-head">
-        <div class="library-title"><span class="library-mark"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg></span><h2 id="library-title">کتابخانهٔ اسناد</h2></div>
-        <button class="primary-button" id="add-document"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg> افزودن سند</button>
+        <div class="library-title"><span class="library-mark"><svg class="icon" aria-hidden="true"><use href="#i-library"/></svg></span><h2 id="library-title">{% translate 'کتابخانهٔ اسناد' %}</h2></div>
+        <button class="primary-button" id="add-document"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg> {% translate 'افزودن سند' %}</button>
       </div>
       <div class="library-tools">
-        <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="search" aria-label="جست‌وجو در اسناد" placeholder="جست‌وجو در عنوان و متن اسناد…" autocomplete="off"></div>
-        <label class="format-filter"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg><span class="sr-only">فیلتر نوع فایل</span><select id="file-type"><option value="">همهٔ فرمت‌ها</option><option value="docx">Word</option><option value="pdf">PDF</option><option value="xlsx">Excel</option><option value="image">تصویر</option><option value="txt">متن</option></select><svg class="icon small-icon" aria-hidden="true"><use href="#i-down"/></svg></label>
+        <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="search" aria-label="{% translate 'جست‌وجو در اسناد' %}" placeholder="{% translate 'جست‌وجو در عنوان و متن اسناد…' %}" autocomplete="off"></div>
+        <label class="format-filter"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg><span class="sr-only">{% translate 'فیلتر نوع فایل' %}</span><select id="file-type"><option value="">{% translate 'همهٔ فرمت‌ها' %}</option><option value="docx">Word</option><option value="pdf">PDF</option><option value="xlsx">Excel</option><option value="image">{% translate 'تصویر' %}</option><option value="txt">{% translate 'متن' %}</option></select><svg class="icon small-icon" aria-hidden="true"><use href="#i-down"/></svg></label>
       </div>
       <div id="library-error" role="alert" class="error-box inset" hidden></div>
       <div class="table-scroll">
         <table class="documents-table">
-          <thead><tr><th scope="col">نام سند</th><th scope="col">نوع فایل</th><th scope="col">آخرین ویرایش</th><th scope="col"><span class="sr-only">مشاهده</span></th></tr></thead>
+          <thead><tr><th scope="col">{% translate 'نام سند' %}</th><th scope="col">{% translate 'نوع فایل' %}</th><th scope="col">{% translate 'آخرین ویرایش' %}</th><th scope="col"><span class="sr-only">{% translate 'مشاهده' %}</span></th></tr></thead>
           <tbody id="documents"></tbody>
         </table>
-        <div id="library-empty" class="empty-library" role="status">در حال خواندن اسناد…</div>
+        <div id="library-empty" class="empty-library" role="status">{% translate 'در حال خواندن اسناد…' %}</div>
       </div>
       <footer class="library-footer"><span id="doc-count" role="status"></span></footer>
     </section>
     <section id="chat" class="chat panel" aria-labelledby="chat-title">
       <header class="chat-header">
         <span class="chat-mark"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg></span>
-        <div class="chat-heading"><h2 id="chat-title">دستیار اسناد</h2><p id="conversation-title">گفت‌وگوی جدید</p></div>
-        <div class="chat-actions"><button class="icon-button" id="history" aria-label="تاریخچهٔ گفت‌وگوها" title="تاریخچهٔ گفت‌وگوها"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></button><button class="icon-button" id="new-chat" aria-label="گفت‌وگوی جدید" title="گفت‌وگوی جدید"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button></div>
+        <div class="chat-heading"><h2 id="chat-title">{% translate 'دستیار اسناد' %}</h2><p id="conversation-title">{% translate 'گفت‌وگوی جدید' %}</p></div>
+        <div class="chat-actions"><button class="icon-button" id="history" aria-label="{% translate 'تاریخچهٔ گفت‌وگوها' %}" title="{% translate 'تاریخچهٔ گفت‌وگوها' %}"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></button><button class="icon-button" id="new-chat" aria-label="{% translate 'گفت‌وگوی جدید' %}" title="{% translate 'گفت‌وگوی جدید' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button></div>
       </header>
       <div class="chat-scroll" id="chat-scroll">
         <div class="chat-welcome" id="chat-welcome">
           <span class="welcome-symbol" aria-hidden="true"><svg class="icon"><use href="#i-quote"/></svg></span>
-          <h3>از اسنادتان بپرسید</h3>
-          <p>پاسخ را همراه با نام سند و بخشی از متن آن بخوانید.</p>
+          <h3>{% translate 'از اسنادتان بپرسید' %}</h3>
+          <p>{% translate 'پاسخ را همراه با نام سند و بخشی از متن آن بخوانید.' %}</p>
           <div class="suggestions">
-            <button type="button" class="suggestion" data-question="سامانهٔ الفبا چه کاربردی دارد؟">سامانهٔ الفبا چه کاربردی دارد؟<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-            <button type="button" class="suggestion" data-question="What does Alefba extract?"><bdi lang="en">What does Alefba extract?</bdi><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <button type="button" class="suggestion" data-question="{% translate 'سامانهٔ الفبا چه کاربردی دارد؟' %}">{% translate 'سامانهٔ الفبا چه کاربردی دارد؟' %}<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <button type="button" class="suggestion" data-question="{% translate 'الفبا چه چیزی استخراج می‌کند؟' %}"><bdi>{% translate 'الفبا چه چیزی استخراج می‌کند؟' %}</bdi><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
           </div>
         </div>
-        <div id="messages" role="log" aria-label="پیام‌های گفت‌وگو" aria-live="polite"></div>
+        <div id="messages" role="log" aria-label="{% translate 'پیام‌های گفت‌وگو' %}" aria-live="polite"></div>
       </div>
       <div class="composer-wrap">
         <p class="error-box" id="chat-error" role="alert" hidden></p>
-        <p id="edit-notice" hidden>ویرایش آخرین پیام <button type="button" id="discard-edit" class="turn-edit">انصراف</button></p><button type="button" id="cancel-answer" class="secondary-button" hidden>لغو ارسال و ویرایش</button><form id="ask-form" class="composer">
-          <textarea id="question" rows="2" maxlength="3000" aria-label="متن پرسش" placeholder="پرسش خود را بنویسید…" dir="auto" required></textarea>
-          <button type="submit" id="send" class="send-button" title="ارسال پرسش" aria-label="ارسال پرسش"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button>
+        <p id="edit-notice" hidden>{% translate 'ویرایش آخرین پیام' %} <button type="button" id="discard-edit" class="turn-edit">{% translate 'انصراف' %}</button></p><button type="button" id="cancel-answer" class="secondary-button" hidden>{% translate 'لغو ارسال و ویرایش' %}</button><form id="ask-form" class="composer">
+          <textarea id="question" rows="2" maxlength="3000" aria-label="{% translate 'متن پرسش' %}" placeholder="{% translate 'پرسش خود را بنویسید…' %}" dir="auto" required></textarea>
+          <button type="submit" id="send" class="send-button" title="{% translate 'ارسال پرسش' %}" aria-label="{% translate 'ارسال پرسش' %}"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></button>
         </form>
       </div>
     </section>
@@ -73,41 +76,42 @@
 </main>
 <dialog id="upload-dialog" aria-labelledby="upload-title">
   <form id="upload-form">
-    <div class="dialog-head"><h2 id="upload-title">افزودن سند</h2><button type="button" class="icon-button" data-close aria-label="بستن"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="dialog-head"><h2 id="upload-title">{% translate 'افزودن سند' %}</h2><button type="button" class="icon-button" data-close aria-label="{% translate 'بستن' %}"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
     <div class="dialog-body">
-      <label class="file-drop" id="file-drop" for="upload-file"><span class="drop-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></span><strong id="file-label">یک یا چند فایل را انتخاب کنید یا اینجا رها کنید</strong><small dir="ltr">DOCX · PDF · XLSX · TXT · PNG · JPG</small><input type="file" name="file" id="upload-file" multiple required accept=".docx,.pdf,.xlsx,.txt,.png,.jpg,.jpeg"></label>
-      <label class="field-label" for="upload-name">عنوان سند <span class="optional">(اختیاری)</span></label>
-      <input type="text" id="upload-name" name="title" maxlength="240" dir="auto" placeholder="پیش‌فرض، نام فایل است">
+      <label class="file-drop" id="file-drop" for="upload-file"><span class="drop-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></span><strong id="file-label">{% translate 'یک یا چند فایل را انتخاب کنید یا اینجا رها کنید' %}</strong><small dir="ltr">DOCX · PDF · XLSX · TXT · PNG · JPG</small><input type="file" name="file" id="upload-file" multiple required accept=".docx,.pdf,.xlsx,.txt,.png,.jpg,.jpeg"></label>
+      <label class="field-label" for="upload-name">{% translate 'عنوان سند' %} <span class="optional">{% translate '(اختیاری)' %}</span></label>
+      <input type="text" id="upload-name" name="title" maxlength="240" dir="auto" placeholder="{% translate 'پیش‌فرض، نام فایل است' %}">
       <p id="upload-error" class="error-box" role="alert" hidden></p>
     </div>
-    <div class="dialog-footer"><button class="primary-button" id="upload-submit">بارگذاری سند</button><button type="button" class="secondary-button" data-close>انصراف</button><span id="upload-status" class="muted" role="status"></span></div>
+    <div class="dialog-footer"><button class="primary-button" id="upload-submit">{% translate 'بارگذاری سند' %}</button><button type="button" class="secondary-button" data-close>{% translate 'انصراف' %}</button><span id="upload-status" class="muted" role="status"></span></div>
   </form>
 </dialog>
 <dialog class="detail-dialog" id="detail-dialog" aria-labelledby="detail-title">
-  <div class="dialog-head"><h2 id="detail-title" dir="auto">مشاهدهٔ سند</h2><button type="button" class="icon-button" data-close aria-label="بستن"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-head"><h2 id="detail-title" dir="auto">{% translate 'مشاهدهٔ سند' %}</h2><button type="button" class="icon-button" data-close aria-label="{% translate 'بستن' %}"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
   <div class="dialog-body">
     <p class="detail-meta" id="detail-meta"></p>
     <div id="detail-text" class="document-text"></div>
     <form id="edit-form" hidden>
-      <label for="edit-name" class="field-label">عنوان سند</label><input id="edit-name" maxlength="240" dir="auto" required>
-      <label for="edit-text" class="field-label">متن کامل سند</label><textarea id="edit-text" rows="11" dir="auto" required></textarea>
+      <label for="edit-name" class="field-label">{% translate 'عنوان سند' %}</label><input id="edit-name" maxlength="240" dir="auto" required>
+      <label for="edit-text" class="field-label">{% translate 'متن کامل سند' %}</label><textarea id="edit-text" rows="11" dir="auto" required></textarea>
     </form>
-    <p id="delete-warning" class="delete-warning" hidden>این سند از کتابخانه و نتایج جست‌وجو حذف می‌شود. حذف را تأیید می‌کنید؟</p>
+    <p id="delete-warning" class="delete-warning" hidden>{% translate 'این سند از کتابخانه و نتایج جست‌وجو حذف می‌شود. حذف را تأیید می‌کنید؟' %}</p>
     <p id="detail-error" class="error-box" role="alert" hidden></p>
   </div>
   <div class="dialog-footer">
-    <button class="secondary-button" id="start-edit"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg> ویرایش</button>
-    <button class="text-danger" id="start-delete"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg> حذف سند</button>
-    <button class="primary-button" id="save-edit" form="edit-form" hidden>ذخیرهٔ تغییرات</button>
-    <button class="danger-button" id="confirm-delete" hidden>بله، حذف شود</button>
-    <button class="secondary-button" id="cancel-change" hidden>انصراف</button>
+    <button class="secondary-button" id="start-edit"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg> {% translate 'ویرایش' %}</button>
+    <button class="text-danger" id="start-delete"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg> {% translate 'حذف سند' %}</button>
+    <button class="primary-button" id="save-edit" form="edit-form" hidden>{% translate 'ذخیرهٔ تغییرات' %}</button>
+    <button class="danger-button" id="confirm-delete" hidden>{% translate 'بله، حذف شود' %}</button>
+    <button class="secondary-button" id="cancel-change" hidden>{% translate 'انصراف' %}</button>
     <span id="detail-status" role="status" class="muted"></span>
   </div>
 </dialog>
 <dialog id="history-dialog" aria-labelledby="history-title">
-  <div class="dialog-head"><h2 id="history-title">تاریخچهٔ گفت‌وگوها</h2><button type="button" class="icon-button" data-close aria-label="بستن"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="dialog-head"><h2 id="history-title">{% translate 'تاریخچهٔ گفت‌وگوها' %}</h2><button type="button" class="icon-button" data-close aria-label="{% translate 'بستن' %}"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
   <div class="dialog-body" id="history-list"></div>
 </dialog>
-<noscript><p class="error-box">برای استفاده از فضای کار، جاوااسکریپت مرورگر را فعال کنید.</p></noscript>
+<noscript><p class="error-box">{% translate 'برای استفاده از فضای کار، جاوااسکریپت مرورگر را فعال کنید.' %}</p></noscript>
 {% endblock %}
-{% block scripts %}<script type="module" src="{% static 'app/workspace.js' %}"></script>{% endblock %}
+{% block scripts %}
+<script src="{% url 'js-catalog' %}"></script><script type="module" src="{% static 'app/workspace.js' %}"></script>{% endblock %}

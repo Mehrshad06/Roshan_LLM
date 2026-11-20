@@ -12,6 +12,7 @@ from typing import Literal
 
 import numpy as np
 from django.core.cache import cache
+from django.utils.translation import gettext
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
@@ -61,7 +62,7 @@ def _vectors(texts):
         return vectors / np.maximum(lengths, 1e-12)
     except Exception as exc:
         raise RAGUnavailable(
-            "مدل جست‌وجوی محلی در دسترس نیست. اتصال دانلود اولیه و مسیر کش مدل را بررسی کنید."
+            gettext("مدل جست‌وجوی محلی در دسترس نیست. اتصال دانلود اولیه و مسیر کش مدل را بررسی کنید.")
         ) from exc
 
 
@@ -212,17 +213,33 @@ Never infer a missing fact, figure or causal connection."""
 
 
 def _invoke(instructions, payload, schema, validate=None):
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        raise RAGUnavailable("کلید OPENROUTER_API_KEY را در فایل .env وارد کنید.")
-    models = dict.fromkeys((
-        os.getenv("OPENROUTER_MODEL") or "baidu/ernie-5.5-flash-preview:free",
-        os.getenv("OPENROUTER_FALLBACK_MODEL") or "openrouter/free",
-    ))
-    cooldown = "openrouter:busy:" + hashlib.sha256(api_key.encode()).hexdigest()
-    busy_message = "ظرفیت یا سهمیهٔ مدل رایگان موقتاً کافی نیست."
-    if cache.get(cooldown):
-        raise RateLimited(busy_message)
+    provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+    try:
+        return _run_model(provider, instructions, payload, schema, validate)
+    except RateLimited:
+        return _run_model("ollama", instructions, payload, schema, validate)
+
+
+def _run_model(provider, instructions, payload, schema, validate):
+    if provider == "ollama":
+        models = [os.getenv("OLLAMA_MODEL") or "qwen2.5:3b"]
+        base_url = os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434/v1"
+        api_key = "ollama"
+    elif provider == "openrouter":
+        api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+        if not api_key:
+            raise RAGUnavailable(gettext("کلید OPENROUTER_API_KEY را در فایل .env وارد کنید."))
+        models = dict.fromkeys((
+            os.getenv("OPENROUTER_MODEL") or "baidu/ernie-5.5-flash-preview:free",
+            os.getenv("OPENROUTER_FALLBACK_MODEL") or "openrouter/free",
+        ))
+        base_url = "https://openrouter.ai/api/v1"
+        cooldown = "openrouter:busy:" + hashlib.sha256(api_key.encode()).hexdigest()
+        busy_message = "ظرفیت یا سهمیهٔ مدل رایگان موقتاً کافی نیست."
+        if cache.get(cooldown):
+            raise RateLimited(busy_message)
+    else:
+        raise RAGUnavailable("Set LLM_PROVIDER to ollama or openrouter.")
     parser = PydanticOutputParser(pydantic_object=schema)
     prompt = ChatPromptTemplate.from_messages([
         ("system", "{instructions}\nReturn only valid JSON.\n{format}"),
@@ -231,12 +248,14 @@ def _invoke(instructions, payload, schema, validate=None):
     logger = logging.getLogger(__name__)
     inputs = {"payload": json.dumps(payload, ensure_ascii=False)}
     for model in models:
-        if not (model.endswith(":free") or model == "openrouter/free"):
-            raise RAGUnavailable("برای مدل اصلی و جایگزین یک مدل رایگان OpenRouter تنظیم کنید.")
+        if provider == "openrouter" and not (model.endswith(":free") or model == "openrouter/free"):
+            raise RAGUnavailable(gettext("برای مدل اصلی و جایگزین یک مدل رایگان OpenRouter تنظیم کنید."))
         chat = ChatOpenAI(
-            model=model, api_key=api_key, base_url="https://openrouter.ai/api/v1",
-            temperature=0, max_retries=0, timeout=35, max_tokens=8192 if schema is Answer else 2400,
-            model_kwargs={"response_format": {"type": "json_object"}},
+            model=model, api_key=api_key, base_url=base_url,
+            temperature=0, max_retries=0, timeout=180 if provider == "ollama" else 35, max_tokens=8192 if schema is Answer else 2400,
+            model_kwargs={"response_format": ({"type": "json_schema", "json_schema": {
+                "name": schema.__name__, "schema": schema.model_json_schema(),
+            }} if provider == "ollama" else {"type": "json_object"})},
         )
         chain = prompt | chat | parser
         if validate:
@@ -246,19 +265,21 @@ def _invoke(instructions, payload, schema, validate=None):
         except Exception as exc:
             last_error = exc
             status = getattr(exc, "status_code", None)
-            logger.warning("OpenRouter stage=%s model=%s status=%s error=%s",
-                           schema.__name__, model, status, type(exc).__name__)
+            logger.warning("%s stage=%s model=%s status=%s error=%s",
+                           provider, schema.__name__, model, status, type(exc).__name__)
+            if provider == "ollama" and (status or type(exc).__name__ in {"APITimeoutError", "APIConnectionError"}):
+                raise RAGUnavailable(gettext("مدل محلی آمادهٔ پاسخ نیست. وضعیت Ollama و دانلود مدل را بررسی کنید.")) from exc
             if status == 401:
-                raise RAGUnavailable("کلید OpenRouter پذیرفته نشد. مقدار و تاریخ انقضای کلید را بررسی کنید.") from exc
+                raise RAGUnavailable(gettext("کلید OpenRouter پذیرفته نشد. مقدار و تاریخ انقضای کلید را بررسی کنید.")) from exc
             if status == 429:
                 reason = "ظرفیت یا سهمیهٔ مدل رایگان موقتاً کافی نیست. کمی بعد دوباره بفرستید."
             elif status in (502, 503, 504) or isinstance(exc, (TimeoutError, ConnectionError)) or type(exc).__name__ in {"APITimeoutError", "APIConnectionError"}:
-                reason = "ارتباط با سرویس مدل برقرار نشد یا زمان پاسخ طولانی شد. دوباره تلاش کنید."
+                reason = gettext("ارتباط با سرویس مدل برقرار نشد یا زمان پاسخ طولانی شد. دوباره تلاش کنید.")
             elif status:
                 reason = f"سرویس مدل درخواست را با کد {status} رد کرد. تنظیمات و دسترسی مدل را بررسی کنید."
             else:
-                reason = "مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید."
-    if status == 429:
+                reason = gettext("مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید.")
+    if provider == "openrouter" and status == 429:
         cache.set(cooldown, True, timeout=45)
         raise RateLimited(busy_message)
     if schema is Answer and status is None and isinstance(last_error, ValueError):
@@ -270,9 +291,9 @@ def _explicit_language(text):
     """Recognize common directives even if the planner overlooks them."""
     languages = r"(english|persian|farsi|انگلیسی|فارسی)"
     patterns = [
-        rf"(?:answer|reply|respond|write|explain|translate)(?:\s+\w+){{0,3}}?\s+(?:in|into)\s+{languages}\b",
+        rf"(?:answer|reply|respond|speak|write|explain|translate)(?:\s+\w+){{0,3}}?\s+(?:in|into)\s+{languages}\b",
         rf"\b{languages}\s+(?:please|only)\b",
-        rf"(?:به\s+(?:زبان\s+)?)?{languages}\s+(?:جواب|پاسخ|بگو|بنویس|توضیح\s+بده|بده)",
+        rf"(?:به\s+(?:زبان\s+)?)?{languages}\s+(?:جواب|پاسخ|بگو|بنویس|توضیح\s+بده|حرف\s+بزن|صحبت\s+کن|بده)",
         rf"(?:پاسخ|جواب)(?:ت|تان|\s+را)?\s+(?:به\s+)?(?:زبان\s+)?{languages}(?:\s|$)",
     ]
     matches = [m for pattern in patterns for m in re.finditer(pattern, text.casefold())]
@@ -396,7 +417,7 @@ def answer_question(user, turns, question):
 
     def respond(search_result):
         plan, context = search_result
-        language = _explicit_language(question) or plan.language.lower()
+        language = _explicit_language(question) or (_default_language(question) if plan.language.lower() in ABSTAIN else plan.language.lower())
         if plan.intent == "social" and language in ABSTAIN:
             return ("خوشحالم اینجایی! از کدوم سند یا موضوع شروع کنیم؟" if language == "fa"
                     else "Good to hear from you! Which document or topic shall we start with?"), []
@@ -453,18 +474,4 @@ def answer_question(user, turns, question):
                 "cited_titles": list(dict.fromkeys(s["title"] for s in t.sources if s.get("title")))[:4]}
                for t in list(turns)[-4:]]
     chain = RunnableLambda(rewrite) | retrieve | respond
-    try:
-        return chain.invoke({"history": history, "latest": question})
-    except RateLimited:
-        queries = [question]
-        if history:
-            queries.append(history[-1]["question"] + " " + question)
-        hits = _retrieve(chunks, queries, original=question, neighbors=False)[:3]
-        language = _default_language(question)
-        if not hits:
-            return ABSTAIN[language], []
-        intro = ("مدل رایگان فعلاً در دسترس نیست. این بخش‌ها را جست‌وجوی محلی برای پرسشت پیدا کرد:"
-                 if language == "fa" else "The free model is busy. Local search found these passages:")
-        sources = [dict(document_id=c.document_id, title=c.document.title, location=c.location,
-                        quote=c.text[:300]) for c in hits]
-        return intro + "\n" + "\n".join(f"«{s['quote']}» [{i}]" for i, s in enumerate(sources, 1)), sources
+    return chain.invoke({"history": history, "latest": question})

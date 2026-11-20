@@ -29,16 +29,16 @@ function scrollToLatest() {
 
 function sourceList(sources) {
   const details = element("details", "sources");
-  details.append(element("summary", "", "منابع پاسخ (" + faNumber.format(sources.length) + ")"));
+  details.append(element("summary", "", gettext("منابع پاسخ (") + faNumber.format(sources.length) + ")"));
   for (const [index, item] of sources.entries()) {
     const source = element("div", "source");
     const title = element("button", "", item.title);
     title.type = "button";
     title.dir = "auto";
-    title.title = "مشاهدهٔ سند منبع";
+    title.title = gettext("مشاهدهٔ سند منبع");
     title.addEventListener("click", () => openDocument(item.document_id, item.quote));
-    const location = element("small", "", item.location.replace(/^Page (\d+)/, "صفحهٔ $1")
-      .replace("Document body", "متن اصلی سند").replace(" · Row ", " · ردیف "));
+    const location = element("small", "", item.location.replace(/^Page (\d+)/, gettext("صفحهٔ $1"))
+      .replace("Document body", gettext("متن اصلی سند")).replace(" · Row ", gettext(" · ردیف ")));
     location.dir = "auto";
     const quote = element("blockquote", "", item.quote);
     quote.dir = "auto";
@@ -54,7 +54,7 @@ function message(role, text, sources = []) {
   const row = element("div", "message " + role + "-message");
   const bubble = element("div", "bubble", text);
   bubble.dir = "auto";
-  row.append(element("span", "message-label", role === "user" ? "شما" : "سندیار"), bubble);
+  row.append(element("span", "message-label", role === "user" ? gettext("شما") : gettext("سندیار")), bubble);
   if (sources.length) {
     const details = sourceList(sources);
     const cards = details.querySelectorAll(".source button");
@@ -66,7 +66,7 @@ function message(role, text, sources = []) {
       if (card) {
         const link = element("button", "turn-edit", part);
         link.type = "button";
-        link.setAttribute("aria-label", "مشاهدهٔ منبع " + number[1]);
+        link.setAttribute("aria-label", gettext("مشاهدهٔ منبع ") + number[1]);
         link.onclick = () => { details.open = true; card.focus(); };
         bubble.append(link);
       } else {
@@ -82,7 +82,7 @@ function renderTurns(turns) {
   for (const turn of turns) {
     const userMessage = message("user", turn.question);
     if (turn === turns.at(-1)) {
-      const edit = element("button", "turn-edit", "ویرایش پیام");
+      const edit = element("button", "turn-edit", gettext("ویرایش پیام"));
       edit.type = "button";
       edit.onclick = () => {
         if (pending) return;
@@ -104,7 +104,7 @@ function selectConversation(record) {
   editing = null;
   byId("edit-notice").hidden = true;
   current = record;
-  byId("conversation-title").textContent = record?.title || "گفت‌وگوی جدید";
+  byId("conversation-title").textContent = record?.title || gettext("گفت‌وگوی جدید");
   byId("conversation-title").dir = "auto";
   byId("question").value = "";
   remember(record?.id ?? "new");
@@ -126,17 +126,17 @@ async function openConversation(id) {
 async function showHistory() {
   const dialog = byId("history-dialog");
   const list = byId("history-list");
-  list.textContent = "در حال خواندن تاریخچه…";
+  list.textContent = gettext("در حال خواندن تاریخچه…");
   dialog.showModal();
   try {
     const conversations = await api(conversationsUrl);
     list.replaceChildren();
-    if (!conversations.length) list.textContent = "هنوز گفت‌وگویی ثبت نشده است.";
+    if (!conversations.length) list.textContent = gettext("هنوز گفت‌وگویی ثبت نشده است.");
     conversations.forEach((record) => {
       const button = element("button", "history-item");
       button.type = "button";
       const label = element("span", "history-label");
-      const title = element("bdi", "history-name", record.title || "گفت‌وگوی جدید");
+      const title = element("bdi", "history-name", record.title || gettext("گفت‌وگوی جدید"));
       label.append(title, element("small", "muted", displayDate(record.created_at)));
       button.append(icon("chat"), label, icon("arrow"));
       button.addEventListener("click", () => {
@@ -159,7 +159,7 @@ async function ask(event) {
   setPending(true);
   input.value = "";
   byId("chat-welcome").hidden = true;
-  const waiting = message("assistant", "در حال جست‌وجو در اسناد و آماده‌سازی پاسخ…");
+  const waiting = message("assistant", gettext("در حال جست‌وجو در اسناد و آماده‌سازی پاسخ…"));
   byId("messages").append(message("user", question), waiting);
   scrollToLatest();
   try {

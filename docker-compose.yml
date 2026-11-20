@@ -2,6 +2,11 @@ services:
   web:
     build: .
     env_file: .env
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434/v1}
+    depends_on:
+      model-init:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -13,5 +18,30 @@ services:
       retries: 8
       start_period: 20s
 
+  ollama:
+    image: ollama/ollama:0.13.5
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_CONTEXT_LENGTH: 8192
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  model-init:
+    image: ollama/ollama:0.13.5
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ['ollama show "$$OLLAMA_MODEL" >/dev/null 2>&1 || exec ollama pull "$$OLLAMA_MODEL"']
+    restart: on-failure:3
+
 volumes:
+  ollama_models:
   roshan_data:

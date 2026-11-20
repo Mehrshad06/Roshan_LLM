@@ -1,6 +1,6 @@
 export const byId = (id) => document.getElementById(id);
-export const faNumber = new Intl.NumberFormat("fa-IR");
-const dateFormat = new Intl.DateTimeFormat("fa-IR", {year: "numeric", month: "2-digit", day: "2-digit"});
+export const faNumber = new Intl.NumberFormat(document.documentElement.lang);
+const dateFormat = new Intl.DateTimeFormat(document.documentElement.lang, {year: "numeric", month: "2-digit", day: "2-digit"});
 
 export function displayDate(value) {
   return value ? dateFormat.format(new Date(value)) : "—";
@@ -36,7 +36,7 @@ function errorText(payload) {
   if (Array.isArray(payload)) return payload.map(errorText).join(" ");
   if (payload && typeof payload === "object") {
     return Object.entries(payload).map(([key, value]) => {
-      const labels = {title: "عنوان", text: "متن سند", file: "فایل", question: "پرسش"};
+      const labels = {title: gettext("عنوان"), text: gettext("متن سند"), file: gettext("فایل"), question: gettext("پرسش")};
       return (labels[key] ? labels[key] + " — " : "") + errorText(value);
     }).join("\n");
   }
@@ -60,12 +60,12 @@ export async function api(path, method = "GET", data, signal) {
     response = await fetch(path, {method, body, headers, signal, credentials: "same-origin"});
   } catch (err) {
     if (err.name === "AbortError") throw err;
-    throw new Error("ارتباط با سرور برقرار نشد. اتصال را بررسی و دوباره تلاش کنید.");
+    throw new Error(gettext("ارتباط با سرور برقرار نشد. اتصال را بررسی و دوباره تلاش کنید."));
   }
   if (response.status === 204) return null;
   const payload = await response.json().catch(() => null);
   if (!response.ok || payload === null) {
-    const message = errorText(payload) || "درخواست انجام نشد. دوباره تلاش کنید.";
+    const message = errorText(payload) || gettext("درخواست انجام نشد. دوباره تلاش کنید.");
     throw new Error(message);
   }
   return payload;

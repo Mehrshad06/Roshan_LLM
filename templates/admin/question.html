@@ -1,7 +1,8 @@
 {% extends "admin/base_site.html" %}
+{% load i18n %}
 {% block content %}
 <form method="post">{% csrf_token %}
   {{ form.as_p }}
-  <div class="submit-row"><input type="submit" class="default" value="ارسال پرسش"></div>
+  <div class="submit-row"><input type="submit" class="default" value="{% translate 'ارسال پرسش' %}"></div>
 </form>
 {% endblock %}

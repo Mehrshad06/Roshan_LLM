@@ -1,0 +1,572 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\nLanguage: en\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid " · آخرین ویرایش "
+msgstr " · Last edited "
+
+msgid " · ردیف "
+msgstr " · Row "
+
+msgid " از "
+msgstr " of "
+
+msgid " سند"
+msgstr " documents"
+
+msgid "(اختیاری)"
+msgstr "(optional)"
+
+msgid "(اختیاری). پاسخ موفق ۲۰۱ است."
+msgstr "(optional). Success returns 201."
+
+msgid ". در PowerShell دستور زیر رمز حساب دمو را می‌پرسد و فهرست اسناد آن را برمی‌گرداند."
+msgstr ". In PowerShell, the command below prompts for the demo password and lists your documents."
+
+msgid "، یا حذف سند. حذف موفق وضعیت ۲۰۴ دارد."
+msgstr ", or delete the document. Successful deletion returns 204."
+
+msgid "آخرین تغییر"
+msgstr "Last modified"
+
+msgid "آخرین ویرایش"
+msgstr "Last edited"
+
+msgid "ارتباط با سرور برقرار نشد. اتصال را بررسی و دوباره تلاش کنید."
+msgstr "Could not reach the server. Check your connection and try again."
+
+msgid "ارتباط با سرویس مدل برقرار نشد یا زمان پاسخ طولانی شد. دوباره تلاش کنید."
+msgstr "The model connection failed or timed out. Please try again."
+
+msgid "ارسال پرسش"
+msgstr "Send question"
+
+msgid "از اسنادتان بپرسید"
+msgstr "Ask about your documents"
+
+msgid "اسناد"
+msgstr "Documents"
+
+msgid "اسناد و جست‌وجو"
+msgstr "Documents and search"
+
+msgid "اطلاعات ورود و CSRF را بررسی کنید."
+msgstr "Check authentication and CSRF."
+
+msgid "افزودن سند"
+msgstr "Add documents"
+
+msgid "الفبا چه چیزی استخراج می‌کند؟"
+msgstr "What does Alefba extract?"
+
+msgid "انصراف"
+msgstr "Cancel"
+
+msgid "اولین درخواست"
+msgstr "First request"
+
+msgid "اگر شواهد کافی نباشد، درخواست پرسش موفق است و فهرست"
+msgstr "When evidence is insufficient, the request succeeds and the"
+
+msgid "این سند از کتابخانه و نتایج جست‌وجو حذف می‌شود. حذف را تأیید می‌کنید؟"
+msgstr "This will remove the document from your library and search results. Continue?"
+
+msgid "این سند هم‌زمان تغییر کرده است. دوباره آن را باز کنید."
+msgstr "The document changed. Please reopen it."
+
+msgid "این عبارت در چند جای سند آمده است."
+msgstr "This passage appears more than once."
+
+msgid "این نام کاربری قبلاً ثبت شده است."
+msgstr "This username is already in use."
+
+msgid "این پاسخ منقضی یا نامعتبر است. پرسش را دوباره بفرستید."
+msgstr "This answer expired or is invalid. Please resend your question."
+
+msgid "این گفت‌وگو تغییر کرد. آن را باز کنید و پرسش را دوباره بفرستید."
+msgstr "The conversation changed. Open it and resend your question."
+
+msgid "با حساب خودت می‌توانی سند بارگذاری کنی و درباره‌اش بپرسی."
+msgstr "Upload documents and ask questions about them with your own account."
+
+msgid "با حساب کاربری خود به اسناد و گفت‌وگوهایتان دسترسی پیدا کنید."
+msgstr "Sign in to access your documents and conversations."
+
+msgid "با عنوان سند، محل و نقل‌قول است."
+msgstr "with the document title, location and quotation."
+
+msgid "بارگذاری با"
+msgstr "Upload using"
+
+msgid "بارگذاری سند"
+msgstr "Upload"
+
+msgid "بخش‌های فضای کار"
+msgstr "Workspace panels"
+
+msgid "برای استفاده از فضای کار، جاوااسکریپت مرورگر را فعال کنید."
+msgstr "Enable JavaScript to use the workspace."
+
+msgid "برای بارگذاری، ابتدا رمز PDF را بردارید."
+msgstr "Remove the PDF password before uploading."
+
+msgid "برای مدل اصلی و جایگزین یک مدل رایگان OpenRouter تنظیم کنید."
+msgstr "Select free OpenRouter models for the primary and fallback models."
+
+msgid "بستن"
+msgstr "Close"
+
+msgid "بفرستید."
+msgstr "with your request."
+
+msgid "بفرستید. پاسخ ۲۰۱ شامل"
+msgstr ". A 201 response includes"
+
+msgid "بله، حذف شود"
+msgstr "Yes, delete"
+
+msgid "تا چهار قطعهٔ مرتبط با عبارت، به ترتیب رتبه. جست‌وجوی ترکیبی روی دستگاه اجرا می‌شود."
+msgstr "Returns up to four ranked passages. Hybrid search runs locally."
+
+msgid "تاریخچه و شواهد همان نشست را بخوانید یا گفت‌وگو را حذف کنید."
+msgstr "Read the history and evidence for this conversation or delete it."
+
+msgid "تاریخچهٔ گفت‌وگوها"
+msgstr "Chat history"
+
+msgid "تصویر"
+msgstr "Image"
+
+msgid "تصویر برای پردازش بیش از حد بزرگ است."
+msgstr "The image is too large to process."
+
+msgid "تعداد خانه‌های برگه از حد پردازش بیشتر است."
+msgstr "The worksheet exceeds the processing limit."
+
+msgid "ثبت‌نام"
+msgstr "Sign up"
+
+msgid "ثبت‌نام در سندیار"
+msgstr "Sign up | Sanadyar"
+
+msgid "جست‌وجو در اسناد"
+msgstr "Search documents"
+
+msgid "جست‌وجو در اسناد حساب من"
+msgstr "Search my documents"
+
+msgid "جست‌وجو در عنوان و متن اسناد…"
+msgstr "Search document titles and text…"
+
+msgid "جست‌وجو در کتابخانه، مدیریت سند و پرسش با شاهد از متن."
+msgstr "Search your library, manage documents and ask questions with cited evidence."
+
+msgid "حجم فایل باید حداکثر ۲۰ مگابایت باشد."
+msgstr "Files must be 20 MB or smaller."
+
+msgid "حجم متن استخراج‌شده از ۶۰۰٬۰۰۰ نویسه بیشتر است."
+msgstr "Extracted text exceeds 600,000 characters."
+
+msgid "حجم محتوای بازشده سند از حد مجاز بیشتر است."
+msgstr "The uncompressed document exceeds the size limit."
+
+msgid "حداکثر تعداد صفحات PDF برابر ۱۰۰ است."
+msgstr "PDFs can contain up to 100 pages."
+
+msgid "حذف سند"
+msgstr "Delete document"
+
+msgid "حساب خود وارد شوید"
+msgstr "sign in to your account"
+
+msgid "حساب کاربری نداری؟"
+msgstr "New here?"
+
+msgid "خالی برمی‌گردد."
+msgstr "list is empty."
+
+msgid "خروج"
+msgstr "Sign out"
+
+msgid "خروج از حساب"
+msgstr "Sign out of account"
+
+msgid "خطاها"
+msgstr "Errors"
+
+msgid "خواندن تصویر ناموفق بود. نصب Tesseract و زبان‌های fas و eng را بررسی کنید."
+msgstr "Could not read the image. Check Tesseract and its Persian and English language packs."
+
+msgid "خواندن خطاها"
+msgstr "Understanding errors"
+
+msgid "خواندن متن کامل، ویرایش"
+msgstr "Read the full text, update"
+
+msgid "داده هم‌زمان تغییر کرده است؛ دوباره آن را بخوانید."
+msgstr "The data changed. Reload and try again."
+
+msgid "در حال استخراج متن و ساخت نمایه…"
+msgstr "Extracting and indexing text…"
+
+msgid "در حال ثبت تغییرات…"
+msgstr "Saving changes…"
+
+msgid "در حال جست‌وجو در اسناد و آماده‌سازی پاسخ…"
+msgstr "Searching your documents and preparing an answer…"
+
+msgid "در حال خواندن اسناد…"
+msgstr "Loading documents…"
+
+msgid "در حال خواندن تاریخچه…"
+msgstr "Loading history…"
+
+msgid "در حال خواندن متن سند…"
+msgstr "Loading document text…"
+
+msgid "در درخواست‌های نوشتنی با نشست مرورگر، مقدار کوکی"
+msgstr "For writes using a browser session, send the cookie"
+
+msgid "در مرورگر با"
+msgstr "In your browser,"
+
+msgid "درخواست انجام نشد. دوباره تلاش کنید."
+msgstr "Request failed. Please try again."
+
+msgid "دسترسی"
+msgstr "Access"
+
+msgid "دسترسی سریع"
+msgstr "Quick navigation"
+
+msgid "دستیار اسناد"
+msgstr "Document assistant"
+
+msgid "دیدن نتیجهٔ JSON"
+msgstr "View JSON"
+
+msgid "ذخیرهٔ تغییرات"
+msgstr "Save changes"
+
+msgid "را در هدر"
+msgstr "in the header"
+
+msgid "راهنمای API"
+msgstr "API guide"
+
+msgid "راهنمای API | سندیار"
+msgstr "API guide | Sanadyar"
+
+msgid "راهنمای API سندیار"
+msgstr "Sanadyar API guide"
+
+msgid "رمز عبور"
+msgstr "Password"
+
+msgid "روشن | مدیریت کتابخانه"
+msgstr "Roshan | Library administration"
+
+msgid "زمان ایجاد"
+msgstr "Created"
+
+msgid "سؤال را در فیلد"
+msgstr "Send your question in"
+
+msgid "ساخت حساب"
+msgstr "Create account"
+
+msgid "ساخت حساب در سندیار"
+msgstr "Create your Sanadyar account"
+
+msgid "سامانهٔ الفبا چه کاربردی دارد؟"
+msgstr "What is Alefba used for?"
+
+msgid "سند"
+msgstr "Document"
+
+msgid "سند منبع تغییر کرده است. پرسش را دوباره بفرستید."
+msgstr "A source document changed. Please resend your question."
+
+msgid "سند یا نشست در حساب شما پیدا نشد."
+msgstr "The document or conversation was not found in your account."
+
+msgid "سندی با این جست‌وجو و فیلتر پیدا نشد."
+msgstr "No documents match your search and filters."
+
+msgid "سندیار"
+msgstr "Sanadyar"
+
+msgid "سندیار | رابط برنامه‌نویسی"
+msgstr "Sanadyar | Document Q&A API"
+
+msgid "سندیار، فضای کار"
+msgstr "Sanadyar workspace"
+
+msgid "شروع گفت‌وگوی جدید"
+msgstr "Start a new conversation"
+
+msgid "شما"
+msgstr "You"
+
+msgid "شواهد"
+msgstr "Evidence"
+
+msgid "شواهد پاسخ"
+msgstr "Answer evidence"
+
+msgid "صفحهٔ $1"
+msgstr "Page $1"
+
+msgid "عبارت جست‌وجو باید بین ۱ تا ۳۰۰۰ نویسه باشد."
+msgstr "Search text must be between 1 and 3,000 characters."
+
+msgid "علت مشکل مدل یا سرویس را توضیح می‌دهد."
+msgstr "explains the model or service error."
+
+msgid "عنوان"
+msgstr "Title"
+
+msgid "عنوان سند"
+msgstr "Document title"
+
+msgid "عنوان سند را وارد کنید."
+msgstr "Enter the document title."
+
+msgid "عنوان یا متن سند را وارد کنید."
+msgstr "Enter a title or document text."
+
+msgid "عنوان، نام فایل و متن را جست‌وجو می‌کند."
+msgstr "searches titles, filenames and document text."
+
+msgid "فایل"
+msgstr "File"
+
+msgid "فایل خوانده نشد. قالب، سلامت و رمزدار نبودن فایل را بررسی کنید."
+msgstr "Could not read this file. Check its format, integrity and password protection."
+
+msgid "فایل سند"
+msgstr "Document file"
+
+msgid "فایل سند را انتخاب کنید."
+msgstr "Select a document file."
+
+msgid "فایل متنی باید با UTF-8 یا UTF-16 ذخیره شده باشد."
+msgstr "Save the text file as UTF-8 or UTF-16."
+
+msgid "فضای کار"
+msgstr "Workspace"
+
+msgid "فضای کار | سندیار"
+msgstr "Workspace | Sanadyar"
+
+msgid "فضای کار سندیار"
+msgstr "Sanadyar workspace"
+
+msgid "فقط آخرین پیام گفت‌وگو قابل ویرایش است."
+msgstr "Only the latest message can be edited."
+
+msgid "فهرست شخصی. پارامتر اختیاری"
+msgstr "Your library. The optional parameter"
+
+msgid "فیلتر نوع فایل"
+msgstr "Filter by file type"
+
+msgid "قالب فایل پشتیبانی نمی‌شود."
+msgstr "Unsupported file format."
+
+msgid "قبلاً ثبت‌نام کرده‌ای؟"
+msgstr "Already registered?"
+
+msgid "لغو ارسال و ویرایش"
+msgstr "Cancel and edit"
+
+msgid "متن"
+msgstr "Text"
+
+msgid "متن اصلی سند"
+msgstr "Document body"
+
+msgid "متن خوانایی در این فایل پیدا نشد."
+msgstr "No readable text was found in this file."
+
+msgid "متن سند"
+msgstr "Document text"
+
+msgid "متن سند از زمان این پاسخ تغییر کرده است."
+msgstr "The document text has changed since this answer."
+
+msgid "متن سند باید بین ۱ تا ۶۰۰٬۰۰۰ نویسه باشد."
+msgstr "Document text must be between 1 and 600,000 characters."
+
+msgid "متن پرسش"
+msgstr "Question"
+
+msgid "متن کامل"
+msgstr "Full text"
+
+msgid "متن کامل سند"
+msgstr "Full document text"
+
+msgid "مدل جست‌وجوی محلی در دسترس نیست. اتصال دانلود اولیه و مسیر کش مدل را بررسی کنید."
+msgstr "Local search is unavailable. Check the embedding model download and cache path."
+
+msgid "مدل محلی آمادهٔ پاسخ نیست. وضعیت Ollama و دانلود مدل را بررسی کنید."
+msgstr "The local model is unavailable. Check Ollama and the model download."
+
+msgid "مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید."
+msgstr "The answer could not be verified. Try asking again or add a detail."
+
+msgid "مدیریت"
+msgstr "Administration"
+
+msgid "مدیریت حساب و اسناد"
+msgstr "Accounts and documents"
+
+msgid "مدیریت روشن"
+msgstr "Roshan administration"
+
+msgid "مشاهده"
+msgstr "View"
+
+msgid "مشاهدهٔ "
+msgstr "View "
+
+msgid "مشاهدهٔ سند"
+msgstr "View document"
+
+msgid "مشاهدهٔ سند منبع"
+msgstr "View source document"
+
+msgid "مشاهدهٔ منبع "
+msgstr "View source "
+
+msgid "منابع پاسخ ("
+msgstr "Sources ("
+
+msgid "نام سند"
+msgstr "Document name"
+
+msgid "نام فایل"
+msgstr "Filename"
+
+msgid "نام کاربری"
+msgstr "Username"
+
+msgid "ناوبری اصلی"
+msgstr "Main navigation"
+
+msgid "نمونهٔ ساخت گفت‌وگو و پرسیدن سؤال در PowerShell"
+msgstr "Create a conversation and ask a question in PowerShell"
+
+msgid "نوع فایل"
+msgstr "File type"
+
+msgid "همهٔ فرمت‌ها"
+msgstr "All formats"
+
+msgid "هنوز سندی ندارید. برای شروع «افزودن سند» را انتخاب کنید."
+msgstr "Your library is empty. Choose “Add documents” to start."
+
+msgid "هنوز گفت‌وگویی ثبت نشده است."
+msgstr "No conversations yet."
+
+msgid "و"
+msgstr "and"
+
+msgid "و فیلدهای"
+msgstr "with the fields"
+
+msgid "ورود"
+msgstr "Sign in"
+
+msgid "ورود انجام نشد. نام کاربری و رمز عبور را بررسی کنید."
+msgstr "Sign-in failed. Check your username and password."
+
+msgid "ورود به سندیار"
+msgstr "Sign in | Sanadyar"
+
+msgid "ورود به فضای کار"
+msgstr "Sign in to your workspace"
+
+msgid "ورودی را بررسی کنید."
+msgstr "Check your input."
+
+msgid "ویرایش"
+msgstr "Edit"
+
+msgid "ویرایش آخرین پیام"
+msgstr "Editing your last message"
+
+msgid "ویرایش پیام"
+msgstr "Edit message"
+
+msgid "پاسخ"
+msgstr "Answer"
+
+msgid "پاسخ به این گفت‌وگو تعلق ندارد."
+msgstr "This answer belongs to another conversation."
+
+msgid "پاسخ را برای سؤال‌های پیگیری نگه دارید."
+msgstr "from the response for follow-up questions."
+
+msgid "پاسخ را همراه با نام سند و بخشی از متن آن بخوانید."
+msgstr "Each answer includes the document name and supporting passage."
+
+msgid "پرسش"
+msgstr "Question"
+
+msgid "پرسش از اسناد من"
+msgstr "Ask about my documents"
+
+msgid "پرسش خود را بنویسید…"
+msgstr "Write your question…"
+
+msgid "پرسش و پاسخ"
+msgstr "Question and answer"
+
+msgid "پرسش‌ها و پاسخ‌ها"
+msgstr "Questions and answers"
+
+msgid "پیام‌های گفت‌وگو"
+msgstr "Chat messages"
+
+msgid "پیش‌فرض، نام فایل است"
+msgstr "Defaults to the filename"
+
+msgid "کتابخانه اسناد"
+msgstr "Document library"
+
+msgid "کتابخانهٔ اسناد"
+msgstr "Document library"
+
+msgid "کلید OPENROUTER_API_KEY را در فایل .env وارد کنید."
+msgstr "Set OPENROUTER_API_KEY in your .env file."
+
+msgid "کلید OpenRouter پذیرفته نشد. مقدار و تاریخ انقضای کلید را بررسی کنید."
+msgstr "OpenRouter rejected the key. Check the key and its expiry."
+
+msgid "گفت‌وگو"
+msgstr "Chat"
+
+msgid "گفت‌وگو و شاهد پاسخ"
+msgstr "Chat and evidence"
+
+msgid "گفت‌وگوها"
+msgstr "Conversations"
+
+msgid "گفت‌وگوهای خود را ببینید یا با بدنهٔ خالی یک گفت‌وگو بسازید. مقدار"
+msgstr "List your conversations or create one with an empty body. Keep the"
+
+msgid "گفت‌وگوی جدید"
+msgstr "New conversation"
+
+msgid "یا"
+msgstr "or"
+
+msgid "یک سند را بارگذاری کنید، بخش مرتبط را پیدا کنید و پاسخ مستند بگیرید."
+msgstr "Upload a document, find a passage and ask a question with evidence."
+
+msgid "یک یا چند فایل را انتخاب کنید یا اینجا رها کنید"
+msgstr "Choose files or drop them here"
+
+msgid "۴۰۱ یا ۴۰۳"
+msgstr "401 or 403"

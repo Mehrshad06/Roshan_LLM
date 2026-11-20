@@ -145,7 +145,7 @@ h2 { font-size: clamp(1.22rem, 1.7vw, 1.6rem); font-weight: 700; line-height: 1.
 .composer:focus-within { border-color: #62917e; }
 .composer textarea { border: none; flex: 1; resize: none; max-height: 120px; padding: 3px; font-size: .85rem; }
 .composer textarea:focus-visible { outline: 0; }
-#question:placeholder-shown, #upload-name:placeholder-shown { direction: rtl; }
+#question:placeholder-shown, #upload-name:placeholder-shown { direction: inherit; }
 .send-button { padding: 0; border-radius: 8px; width: 34px; height: 34px; display: grid; place-items: center; }
 .send-button .icon { transform: scaleX(-1); width: 16px; }
 .mobile-switch { display: none; }

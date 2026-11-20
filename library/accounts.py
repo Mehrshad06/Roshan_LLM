@@ -1,3 +1,4 @@
+from django.utils.translation import gettext
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.db import IntegrityError, transaction
@@ -18,5 +19,5 @@ def signup(request):
                     login(request, user)
                     return redirect("dashboard")
         except IntegrityError:
-            form.add_error("username", "این نام کاربری قبلاً ثبت شده است.")
+            form.add_error("username", gettext("این نام کاربری قبلاً ثبت شده است."))
     return render(request, "registration/signup.html", {"form": form})

@@ -1,3 +1,4 @@
+from django.utils.translation import gettext
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.db.models import Q
@@ -43,7 +44,7 @@ class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
     def search(self, request):
         query = request.query_params.get("q", "").strip()
         if not 1 <= len(query) <= 3000:
-            raise ValueError("عبارت جست‌وجو باید بین ۱ تا ۳۰۰۰ نویسه باشد.")
+            raise ValueError(gettext("عبارت جست‌وجو باید بین ۱ تا ۳۰۰۰ نویسه باشد."))
         return Response(search_evidence(request.user, query))
 
     def get_queryset(self):
@@ -96,7 +97,7 @@ class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         try:
             draft = signing.loads(str(request.data.get("ticket", "")), salt="chat-preview", max_age=600)
         except signing.BadSignature as exc:
-            raise ValueError("این پاسخ منقضی یا نامعتبر است. پرسش را دوباره بفرستید.") from exc
+            raise ValueError(gettext("این پاسخ منقضی یا نامعتبر است. پرسش را دوباره بفرستید.")) from exc
         return Response(TurnOutput(services.save_answer(request.user, conversation, draft)).data, status=201)
 
     def get_queryset(self):

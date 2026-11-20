@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from django.utils.translation import gettext_lazy as _
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
@@ -33,6 +34,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -57,6 +59,8 @@ DATABASES = {"default": {
     "OPTIONS": {"timeout": 30, "transaction_mode": "IMMEDIATE"},
 }}
 LANGUAGE_CODE = "fa"
+LANGUAGES = [("fa", "فارسی"), ("en", "English")]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Asia/Tehran"
 USE_I18N = USE_TZ = True
 STATIC_URL = "/static/"
@@ -81,8 +85,8 @@ REST_FRAMEWORK = {
 }
 DATA_UPLOAD_MAX_MEMORY_SIZE = 4 * 1024 * 1024
 SPECTACULAR_SETTINGS = {
-    "TITLE": "سندیار | Document Q&A API", "VERSION": "1.0.0",
-    "DESCRIPTION": "Search your library, manage documents and ask questions with cited evidence.",
+    "TITLE": _("سندیار | رابط برنامه‌نویسی"), "VERSION": "1.0.0",
+    "DESCRIPTION": _("جست‌وجو در کتابخانه، مدیریت سند و پرسش با شاهد از متن."),
     "SWAGGER_UI_DIST": "SIDECAR", "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "SERVE_INCLUDE_SCHEMA": False, "COMPONENT_SPLIT_REQUEST": True,
 }

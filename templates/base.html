@@ -1,15 +1,19 @@
+{% load i18n %}
 {% load static %}
 <!doctype html>
-<html lang="fa" dir="rtl">
+{% get_current_language as lang %}{% get_current_language_bidi as bidi %}
+<html lang="{{ lang }}" dir="{{ bidi|yesno:'rtl,ltr' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#174b46">
   <link rel="stylesheet" href="{% static 'app/workspace.css' %}">
-  <title>{% block title %}سندیار{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'app/brand.css' %}">
+  <title>{% block title %}{% translate 'سندیار' %}{% endblock %}</title>
 </head>
 <body>
   {% include "icons.html" %}
+  {% block language %}<div class="language-bar">{% include "language_switch.html" %}</div>{% endblock %}
   {% block content %}{% endblock %}
   {% block scripts %}{% endblock %}
 </body>

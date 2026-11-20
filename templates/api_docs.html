@@ -1,36 +1,37 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% load static %}
-{% block title %}راهنمای API | سندیار{% endblock %}
+{% block title %}{% translate 'راهنمای API | سندیار' %}{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'app/api-docs.css' %}">
 <main class="api-guide">
-  <nav aria-label="دسترسی سریع"><a href="/">سندیار</a><a href="#documents">اسناد</a><a href="#chat">گفت‌وگو</a><a href="#errors">خطاها</a></nav>
-  <header><h1>راهنمای API سندیار</h1><p>یک سند را بارگذاری کنید، بخش مرتبط را پیدا کنید و پاسخ مستند بگیرید.</p></header>
-  <section><h2>اولین درخواست</h2>
-    <p>در مرورگر با <a href="{% url 'login' %}?next={% url 'api-docs' %}">حساب خود وارد شوید</a>. در PowerShell دستور زیر رمز حساب دمو را می‌پرسد و فهرست اسناد آن را برمی‌گرداند.</p>
+  <nav aria-label="{% translate 'دسترسی سریع' %}"><a href="/">{% translate 'سندیار' %}</a><a href="#documents">{% translate 'اسناد' %}</a><a href="#chat">{% translate 'گفت‌وگو' %}</a><a href="#errors">{% translate 'خطاها' %}</a></nav>
+  <header><h1>{% translate 'راهنمای API سندیار' %}</h1><p>{% translate 'یک سند را بارگذاری کنید، بخش مرتبط را پیدا کنید و پاسخ مستند بگیرید.' %}</p></header>
+  <section><h2>{% translate 'اولین درخواست' %}</h2>
+    <p>{% translate 'در مرورگر با' %} <a href="{% url 'login' %}?next={% url 'api-docs' %}">{% translate 'حساب خود وارد شوید' %}</a>{% translate '. در PowerShell دستور زیر رمز حساب دمو را می‌پرسد و فهرست اسناد آن را برمی‌گرداند.' %}</p>
     <pre>curl.exe -u demo http://127.0.0.1:8000/api/documents/</pre>
-    <p>در درخواست‌های نوشتنی با نشست مرورگر، مقدار کوکی <code>csrftoken</code> را در هدر <code>X-CSRFToken</code> بفرستید.</p>
+    <p>{% translate 'در درخواست‌های نوشتنی با نشست مرورگر، مقدار کوکی' %} <code>csrftoken</code> {% translate 'را در هدر' %} <code>X-CSRFToken</code> {% translate 'بفرستید.' %}</p>
   </section>
-  <section id="documents"><h2>اسناد و جست‌وجو</h2>
+  <section id="documents"><h2>{% translate 'اسناد و جست‌وجو' %}</h2>
     <dl>
-      <dt>GET /api/documents/</dt><dd>فهرست شخصی. پارامتر اختیاری <code>search</code> عنوان، نام فایل و متن را جست‌وجو می‌کند.</dd>
-      <dt>GET /api/documents/search/?q=ALF-27</dt><dd>تا چهار قطعهٔ مرتبط با عبارت، به ترتیب رتبه. جست‌وجوی ترکیبی روی دستگاه اجرا می‌شود.</dd>
-      <dt>POST /api/documents/</dt><dd>بارگذاری با <code>multipart/form-data</code> و فیلدهای <code>file</code> و <code>title</code> (اختیاری). پاسخ موفق ۲۰۱ است.</dd>
-      <dt>GET · PATCH · DELETE /api/documents/{id}/</dt><dd>خواندن متن کامل، ویرایش <code>title</code> یا <code>text</code>، یا حذف سند. حذف موفق وضعیت ۲۰۴ دارد.</dd>
+      <dt>GET /api/documents/</dt><dd>{% translate 'فهرست شخصی. پارامتر اختیاری' %} <code>search</code> {% translate 'عنوان، نام فایل و متن را جست‌وجو می‌کند.' %}</dd>
+      <dt>GET /api/documents/search/?q=ALF-27</dt><dd>{% translate 'تا چهار قطعهٔ مرتبط با عبارت، به ترتیب رتبه. جست‌وجوی ترکیبی روی دستگاه اجرا می‌شود.' %}</dd>
+      <dt>POST /api/documents/</dt><dd>{% translate 'بارگذاری با' %} <code>multipart/form-data</code> {% translate 'و فیلدهای' %} <code>file</code> {% translate 'و' %} <code>title</code> {% translate '(اختیاری). پاسخ موفق ۲۰۱ است.' %}</dd>
+      <dt>GET · PATCH · DELETE /api/documents/{id}/</dt><dd>{% translate 'خواندن متن کامل، ویرایش' %} <code>title</code> {% translate 'یا' %} <code>text</code>{% translate '، یا حذف سند. حذف موفق وضعیت ۲۰۴ دارد.' %}</dd>
     </dl>
-    <form method="get" action="{% url 'document-search' %}"><label for="evidence-q">جست‌وجو در اسناد حساب من</label><div><input id="evidence-q" dir="auto" name="q" value="ALF-27" required maxlength="3000"><button type="submit" name="format" value="json">دیدن نتیجهٔ JSON</button></div></form>
+    <form method="get" action="{% url 'document-search' %}"><label for="evidence-q">{% translate 'جست‌وجو در اسناد حساب من' %}</label><div><input id="evidence-q" dir="auto" name="q" value="ALF-27" required maxlength="3000"><button type="submit" name="format" value="json">{% translate 'دیدن نتیجهٔ JSON' %}</button></div></form>
   </section>
-  <section id="chat"><h2>گفت‌وگو و شاهد پاسخ</h2>
+  <section id="chat"><h2>{% translate 'گفت‌وگو و شاهد پاسخ' %}</h2>
     <dl>
-      <dt>GET · POST /api/conversations/</dt><dd>گفت‌وگوهای خود را ببینید یا با بدنهٔ خالی یک گفت‌وگو بسازید. مقدار <code>id</code> پاسخ را برای سؤال‌های پیگیری نگه دارید.</dd>
-      <dt>POST /api/conversations/{id}/ask/</dt><dd>سؤال را در فیلد <code>question</code> بفرستید. پاسخ ۲۰۱ شامل <code>answer</code> و <code>sources</code> با عنوان سند، محل و نقل‌قول است.</dd>
-      <dt>GET · DELETE /api/conversations/{id}/</dt><dd>تاریخچه و شواهد همان نشست را بخوانید یا گفت‌وگو را حذف کنید.</dd>
+      <dt>GET · POST /api/conversations/</dt><dd>{% translate 'گفت‌وگوهای خود را ببینید یا با بدنهٔ خالی یک گفت‌وگو بسازید. مقدار' %} <code>id</code> {% translate 'پاسخ را برای سؤال‌های پیگیری نگه دارید.' %}</dd>
+      <dt>POST /api/conversations/{id}/ask/</dt><dd>{% translate 'سؤال را در فیلد' %} <code>question</code> {% translate 'بفرستید. پاسخ ۲۰۱ شامل' %} <code>answer</code> {% translate 'و' %} <code>sources</code> {% translate 'با عنوان سند، محل و نقل‌قول است.' %}</dd>
+      <dt>GET · DELETE /api/conversations/{id}/</dt><dd>{% translate 'تاریخچه و شواهد همان نشست را بخوانید یا گفت‌وگو را حذف کنید.' %}</dd>
     </dl>
-    <details><summary>نمونهٔ ساخت گفت‌وگو و پرسیدن سؤال در PowerShell</summary>
+    <details><summary>{% translate 'نمونهٔ ساخت گفت‌وگو و پرسیدن سؤال در PowerShell' %}</summary>
     <pre>$chat = (curl.exe -s -u demo -X POST http://127.0.0.1:8000/api/conversations/) | ConvertFrom-Json
 curl.exe -u demo --data-urlencode "question=Which formats does ALF-27 accept?" "http://127.0.0.1:8000/api/conversations/$($chat.id)/ask/"</pre></details>
   </section>
-  <section id="errors"><h2>خواندن خطاها</h2><p><b>۴۰۰</b> ورودی را بررسی کنید. <b>۴۰۱ یا ۴۰۳</b> اطلاعات ورود و CSRF را بررسی کنید. <b>۴۰۴</b> سند یا نشست در حساب شما پیدا نشد. <b>۴۰۹</b> داده هم‌زمان تغییر کرده است؛ دوباره آن را بخوانید. <b>۵۰۳</b> متن <code>detail</code> علت مشکل مدل یا سرویس را توضیح می‌دهد.</p>
-    <p>اگر شواهد کافی نباشد، درخواست پرسش موفق است و فهرست <code>sources</code> خالی برمی‌گردد.</p></section>
+  <section id="errors"><h2>{% translate 'خواندن خطاها' %}</h2><p><b>۴۰۰</b> {% translate 'ورودی را بررسی کنید.' %} <b>{% translate '۴۰۱ یا ۴۰۳' %}</b> {% translate 'اطلاعات ورود و CSRF را بررسی کنید.' %} <b>۴۰۴</b> {% translate 'سند یا نشست در حساب شما پیدا نشد.' %} <b>۴۰۹</b> {% translate 'داده هم‌زمان تغییر کرده است؛ دوباره آن را بخوانید.' %} <b>۵۰۳</b> {% translate 'متن' %} <code>detail</code> {% translate 'علت مشکل مدل یا سرویس را توضیح می‌دهد.' %}</p>
+    <p>{% translate 'اگر شواهد کافی نباشد، درخواست پرسش موفق است و فهرست' %} <code>sources</code> {% translate 'خالی برمی‌گردد.' %}</p></section>
 </main>
 {% endblock %}

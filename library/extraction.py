@@ -1,3 +1,4 @@
+from django.utils.translation import gettext
 """Read uploads into ordered, citable sections before LangChain indexes them."""
 
 from io import BytesIO
@@ -24,7 +25,7 @@ _pdf_lock = Lock()  # MuPDF documents must not be used by concurrent threads.
 
 def _ocr(image):
     if image.width * image.height > MAX_PIXELS:
-        raise ValueError("تصویر برای پردازش بیش از حد بزرگ است.")
+        raise ValueError(gettext("تصویر برای پردازش بیش از حد بزرگ است."))
     image = ImageOps.exif_transpose(image).convert("RGB")
     stream = BytesIO()
     image.save(stream, format="PNG")
@@ -39,16 +40,16 @@ def _ocr(image):
             if text:
                 return text.replace("\u200e", "").replace("\u200f", "")
     except (OSError, subprocess.SubprocessError) as exc:
-        raise ValueError("خواندن تصویر ناموفق بود. نصب Tesseract و زبان‌های fas و eng را بررسی کنید.") from exc
+        raise ValueError(gettext("خواندن تصویر ناموفق بود. نصب Tesseract و زبان‌های fas و eng را بررسی کنید.")) from exc
     return ""
 
 
 def _pdf(data):
     with _pdf_lock, pymupdf.open(stream=data, filetype="pdf") as document:
         if document.needs_pass:
-            raise ValueError("برای بارگذاری، ابتدا رمز PDF را بردارید.")
+            raise ValueError(gettext("برای بارگذاری، ابتدا رمز PDF را بردارید."))
         if len(document) > 100:
-            raise ValueError("حداکثر تعداد صفحات PDF برابر ۱۰۰ است.")
+            raise ValueError(gettext("حداکثر تعداد صفحات PDF برابر ۱۰۰ است."))
         for page in document:
             location = f"Page {page.number + 1}"
             text = page.get_text("text").strip()
@@ -116,7 +117,7 @@ def _xlsx(data):
         for sheet in values:
             source = formulas[sheet.title]
             if (sheet.max_row or 0) * (sheet.max_column or 0) > 200_000:
-                raise ValueError("تعداد خانه‌های برگه از حد پردازش بیشتر است.")
+                raise ValueError(gettext("تعداد خانه‌های برگه از حد پردازش بیشتر است."))
             for number, (row, raw) in enumerate(zip(
                 sheet.iter_rows(values_only=True), source.iter_rows(values_only=True)
             ), 1):
@@ -136,7 +137,7 @@ def _read(data, suffix):
     if suffix in {".docx", ".xlsx"}:
         with ZipFile(BytesIO(data)) as archive:
             if sum(info.file_size for info in archive.infolist()) > 80 * 1024 * 1024:
-                raise ValueError("حجم محتوای بازشده سند از حد مجاز بیشتر است.")
+                raise ValueError(gettext("حجم محتوای بازشده سند از حد مجاز بیشتر است."))
         return _docx(data) if suffix == ".docx" else _xlsx(data)
     if suffix == ".pdf":
         return _pdf(data)
@@ -151,12 +152,12 @@ def extract_sections(upload):
     """Accept a Django upload or any seekable binary file with a name."""
     suffix = Path(upload.name).suffix.lower()
     if suffix not in FORMATS:
-        raise ValueError("قالب فایل پشتیبانی نمی‌شود.")
+        raise ValueError(gettext("قالب فایل پشتیبانی نمی‌شود."))
     upload.seek(0)
     data = upload.read(MAX_UPLOAD + 1)
     upload.seek(0)
     if len(data) > MAX_UPLOAD:
-        raise ValueError("حجم فایل باید حداکثر ۲۰ مگابایت باشد.")
+        raise ValueError(gettext("حجم فایل باید حداکثر ۲۰ مگابایت باشد."))
     sections = []
     length = 0
     try:
@@ -166,14 +167,14 @@ def extract_sections(upload):
                 continue
             length += len(text)
             if length > MAX_CHARS:
-                raise ValueError("حجم متن استخراج‌شده از ۶۰۰٬۰۰۰ نویسه بیشتر است.")
+                raise ValueError(gettext("حجم متن استخراج‌شده از ۶۰۰٬۰۰۰ نویسه بیشتر است."))
             sections.append({"location": location, "text": text})
     except UnicodeError as exc:
-        raise ValueError("فایل متنی باید با UTF-8 یا UTF-16 ذخیره شده باشد.") from exc
+        raise ValueError(gettext("فایل متنی باید با UTF-8 یا UTF-16 ذخیره شده باشد.")) from exc
     except ValueError:
         raise
     except Exception as exc:
-        raise ValueError("فایل خوانده نشد. قالب، سلامت و رمزدار نبودن فایل را بررسی کنید.") from exc
+        raise ValueError(gettext("فایل خوانده نشد. قالب، سلامت و رمزدار نبودن فایل را بررسی کنید.")) from exc
     if not sections:
-        raise ValueError("متن خوانایی در این فایل پیدا نشد.")
+        raise ValueError(gettext("متن خوانایی در این فایل پیدا نشد."))
     return sections

@@ -1,0 +1,4 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'app/brand.css' %}">{% endblock %}
+{% block nav-global %}<div class="admin-navigation"><a href="{% url 'dashboard' %}">{% translate "فضای کار" %}</a>{% include "language_switch.html" %}</div>{% endblock %}
