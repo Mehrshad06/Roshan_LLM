@@ -220,7 +220,8 @@ def _invoke(instructions, payload, schema, validate=None):
             raise RAGUnavailable("برای مدل اصلی و جایگزین یک مدل رایگان OpenRouter تنظیم کنید.")
         chat = ChatOpenAI(
             model=model, api_key=api_key, base_url="https://openrouter.ai/api/v1",
-            temperature=0, max_retries=0, timeout=35, max_tokens=3200 if schema is Answer else 1000,
+            temperature=0, max_retries=0, timeout=35, max_tokens=8192 if schema is Answer else 2400,
+            model_kwargs={"response_format": {"type": "json_object"}},
         )
         chain = prompt | chat | parser
         if validate:
