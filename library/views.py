@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from . import services
 from .models import Conversation, Document
-from .rag import RAGUnavailable
+from .rag import RAGUnavailable, search_evidence
 from .serializers import (ConversationDetail, ConversationSummary, DocumentDetail,
                           DocumentSummary, EditInput, QuestionInput, TurnOutput, UploadInput)
 
@@ -28,6 +28,13 @@ class ScopedViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
 
 
 class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
+    @action(detail=False, methods=["get"], url_path="search")
+    def search(self, request):
+        query = request.query_params.get("q", "").strip()
+        if not 1 <= len(query) <= 3000:
+            raise ValueError("عبارت جست‌وجو باید بین ۱ تا ۳۰۰۰ نویسه باشد.")
+        return Response(search_evidence(request.user, query))
+
     def get_queryset(self):
         docs = Document.objects.filter(owner=self.request.user)
         term = self.request.query_params.get("search", "").strip()

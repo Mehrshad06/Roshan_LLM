@@ -95,7 +95,7 @@ def _bm25(query, counts, document_frequency, lengths, average):
     return scores
 
 
-def _retrieve(chunks, queries):
+def _retrieve(chunks, queries, *, original=None, neighbors=True):
     """Reciprocal rank fusion of cosine and BM25 results; add adjacent chunks."""
     queries = list(dict.fromkeys(queries))
     corpus = np.array([chunk.vector for chunk in chunks], dtype=np.float32)
@@ -113,13 +113,32 @@ def _retrieve(chunks, queries):
 
     by_position = {(chunk.document_id, chunk.position): chunk for chunk in chunks}
     context = {}
-    for index, _score in fused.most_common(4):
+    # Keep an exact project code above semantically similar projects, even if
+    # the planner translated or omitted the code in its alternative query.
+    codes = {t for t in _tokens(original or "") if re.fullmatch(r"[a-z]+[-_]\d+", t)}
+    ranked = sorted(fused, key=lambda i: (len(codes.intersection(counts[i])), fused[i]), reverse=True)
+    for index in ranked[:4]:
         hit = chunks[index]
-        for offset in (0, -1, 1):
+        for offset in ((0, -1, 1) if neighbors else (0,)):
             neighbor = by_position.get((hit.document_id, hit.position + offset))
             if neighbor:
                 context[neighbor.pk] = neighbor
     return list(context.values())
+
+
+def owned_chunks(user):
+    return list(Chunk.objects.filter(document__owner=user).select_related("document")
+                .only("document__title", "position", "location", "text", "vector")
+                .order_by("document_id", "position"))
+
+
+def search_evidence(user, query):
+    chunks = owned_chunks(user)
+    if not chunks:
+        return []
+    hits = _retrieve(chunks, [query], original=query, neighbors=False)
+    return [{"document_id": c.document_id, "title": c.document.title,
+             "location": c.location, "quote": c.text} for c in hits]
 
 
 class SearchPlan(BaseModel):
@@ -290,16 +309,17 @@ def answer_question(user, turns, question):
             return "Hello! Which document would you like to explore? I can also give you an overview of your library.", []
         return "سلام! می‌خواهی بدانی سندهایت دربارهٔ چه هستند یا دربارهٔ سند خاصی سؤال داری؟", []
     # Ownership filtering happens before embedding comparisons or LLM calls.
-    chunks = list(Chunk.objects.filter(document__owner=user).select_related("document")
-                  .only("document__title", "position", "location", "text", "vector")
-                  .order_by("document_id", "position"))
+    chunks = owned_chunks(user)
     if not chunks:
         return ABSTAIN[_default_language(question)], []
 
     def rewrite(payload):
         normalized = " ".join(_tokens(question))
-        if re.fullmatch(r"(?:این ها |این |اینها )?(?:اسناد|سندها|فایل ها) (?:من |من درباره |درباره )?"
-                        r"(?:چه چیز هایی|چه چیزهایی|چه موضوعاتی|چی) (?:هست|هستن|هستند|است|اند)", normalized):
+        common_overviews = {"what are my documents about", "list my documents", "what documents do i have",
+                            "چه سندهایی دارم", "چه اسنادی دارم", "سندهایم را معرفی کن", "لیست اسناد من"}
+        if normalized in common_overviews or re.fullmatch(
+                r"(?:این ها |این |اینها )?(?:اسناد|سندها|فایل ها) (?:من |من درباره |درباره )?"
+                r"(?:چه چیز هایی|چه چیزهایی|چه موضوعاتی|چی) (?:هست|هستن|هستند|است|اند)", normalized):
             return SearchPlan(intent="overview", standalone=question, alternative=question,
                               language=_default_language(question))
         return _invoke(PLAN, payload, SearchPlan)
@@ -313,7 +333,7 @@ def answer_question(user, turns, question):
             return plan, _retrieve(chunks, [question, "الزامات پروژه وظایف نحوه تحویل قابلیت‌های مورد انتظار",
                                             "assignment requirements deliverables implementation tasks"])
         # Keep the original wording for exact codes lost in a rewrite.
-        context = _retrieve(chunks, [plan.standalone, plan.alternative, question])
+        context = _retrieve(chunks, [plan.standalone, plan.alternative, question], original=question)
         return plan, context
 
     def respond(search_result):
@@ -344,6 +364,8 @@ def answer_question(user, turns, question):
                        if language == "fa" else " Please upload the assignment brief or tell me its document title.")
         return answer, sources
 
-    history = [{"question": t.question[:1200], "answer": t.answer[:1500]} for t in list(turns)[-4:]]
+    history = [{"question": t.question[:1200], "answer": t.answer[:1500],
+                "cited_titles": list(dict.fromkeys(s["title"] for s in t.sources if s.get("title")))[:4]}
+               for t in list(turns)[-4:]]
     chain = RunnableLambda(rewrite) | retrieve | respond
     return chain.invoke({"history": history, "latest": question})

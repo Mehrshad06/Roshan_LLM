@@ -112,6 +112,19 @@ class RetrievalTests(TestCase):
             result = rag._retrieve([unrelated, neighbor, relevant], ["AB-۴۱۲"])
         self.assertEqual(result, [relevant, neighbor])
 
+    def test_exact_code_outranks_semantic_distractors_in_search_api(self):
+        self.add_chunk(self.other, "AB-412 private")
+        for pos in range(6):
+            self.add_chunk(self.owned, "Pilot handbook AB-410", pos)
+        hit = self.add_chunk(self.owned, "Pilot handbook AB-412", 8, vector=(0, 1))
+        self.client.force_login(self.user)
+        with patch.object(rag, "_vectors", return_value=np.array([[1, 0]])):
+            rows = self.client.get("/api/documents/search/", {"q": "Pilot AB-۴۱۲"}).json()
+        self.assertEqual(rows[0]["quote"], hit.text)
+        self.assertTrue(all(row["document_id"] == self.owned.pk for row in rows))
+        self.assertEqual(self.client.get("/api/documents/search/").status_code, 400)
+        self.assertContains(self.client.get("/api/docs/"), "/api/documents/search/")
+
     def test_existing_quote_cannot_support_a_different_numeric_limit(self):
         chunk = self.add_chunk(self.owned, "سقف بارگذاری ۲۴ مگابایت است.")
         result = rag.Answer(claims=[rag.Claim(

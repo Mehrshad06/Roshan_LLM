@@ -1,0 +1,16 @@
+.api-guide {max-width: 55rem; margin: auto; padding: 1rem clamp(1rem,4vw,3rem) 4rem; line-height: 1.85; color: #193b35}
+.api-guide nav, .api-guide form div {display:flex; align-items:center; flex-wrap:wrap; gap:1rem}
+.api-guide nav {border-bottom:1px solid #bfd4ce; padding-block:1rem}
+.api-guide nav a:first-child {margin-inline-end:auto; font-weight:700}
+.api-guide a {color:#106151}
+.api-guide header {padding:2rem 0 .7rem}
+.api-guide h1, .api-guide h2 {margin:0}
+.api-guide section {background:white; margin-block:1rem; padding:clamp(1rem,3vw,2rem); border:1px solid #ccdcd6; border-radius:1rem}
+.api-guide dt,.api-guide code,.api-guide pre {direction:ltr; unicode-bidi:isolate; font-family:Consolas,monospace}
+.api-guide dt,.api-guide pre {text-align:left; overflow:auto; color:#165748}
+.api-guide dd {margin:0 0 1rem; padding-block:.25rem; border-bottom:1px solid #e5eeeb}
+.api-guide pre,.api-guide form {background:#edf5f1; padding:1rem; border-radius:.65rem}
+.api-guide input,.api-guide button {font:inherit; padding:.3rem .8rem; border:1px solid #8eafa4; border-radius:.45rem}
+.api-guide input {min-width:0; max-width:100%}
+.api-guide button {background:#195b4c; color:white; cursor:pointer}
+.api-guide summary {cursor:pointer}
