@@ -51,3 +51,18 @@ class ConversationDetail(ConversationSummary):
 
 class QuestionInput(serializers.Serializer):
     question = serializers.CharField(max_length=3000)
+
+
+class PreviewInput(QuestionInput):
+    replace_id = serializers.IntegerField(min_value=1, allow_null=True, required=False)
+
+
+class Ticket(serializers.Serializer):
+    ticket = serializers.CharField()
+
+
+class Evidence(serializers.Serializer):
+    document_id = serializers.IntegerField()
+    title = serializers.CharField()
+    location = serializers.CharField()
+    quote = serializers.CharField()

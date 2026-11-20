@@ -73,7 +73,22 @@ class RetrievalTests(TestCase):
                 self.assertIn(expected, answer)
                 self.assertEqual(sources, [])
 
+    def test_full_library_language_count_without_provider(self):
+        self.add_chunk(self.owned, "این سند فارسی است.")
+        self.add_chunk(self.owned, "This page is in English.", position=5)
+        self.add_chunk(Document.objects.create(owner=self.user, title="English"), "A short guide.")
+        self.add_chunk(self.other, "Hidden content.")
+        with patch.object(rag, "_invoke", side_effect=AssertionError("provider call")):
+            answer, sources = rag.answer_question(self.user, [], "چند تا از این سند ها فقط انگلیسی هست و کدام هم فارسی داره؟")
+        self.assertIn("متن 2 سند", answer)
+        self.assertIn("انگلیسی (1) — English", answer)
+        self.assertIn("فارسی و انگلیسی (1)", answer)
+        self.assertEqual({s["location"] for s in sources}, {"Page 1", "Page 6"})
+        self.assertNotIn(self.other.pk, [s["document_id"] for s in sources])
+
     def test_rate_limit_tries_backup_once_then_reports_capacity(self):
+        from django.core.cache import cache
+        self.addCleanup(cache.clear)
         class Busy(Exception):
             status_code = 429
         def reject(prompt):
@@ -145,7 +160,8 @@ class RetrievalTests(TestCase):
         self.assertEqual(rows[0]["quote"], hit.text)
         self.assertTrue(all(row["document_id"] == self.owned.pk for row in rows))
         self.assertEqual(self.client.get("/api/documents/search/").status_code, 400)
-        self.assertContains(self.client.get("/api/docs/"), "/api/documents/search/")
+        self.assertContains(self.client.get("/api/docs/"), "SwaggerUIBundle")
+        self.assertContains(self.client.get("/api/schema/?format=json"), "/api/documents/search/")
 
     def test_existing_quote_cannot_support_a_different_numeric_limit(self):
         chunk = self.add_chunk(self.owned, "سقف بارگذاری ۲۴ مگابایت است.")

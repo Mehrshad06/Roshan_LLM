@@ -27,7 +27,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "rest_framework", "library",
+    "rest_framework", "drf_spectacular", "drf_spectacular_sidecar", "library",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -71,6 +71,7 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = LOGIN_URL
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",
@@ -79,3 +80,9 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
 }
 DATA_UPLOAD_MAX_MEMORY_SIZE = 4 * 1024 * 1024
+SPECTACULAR_SETTINGS = {
+    "TITLE": "سندیار | Document Q&A API", "VERSION": "1.0.0",
+    "DESCRIPTION": "Search your library, manage documents and ask questions with cited evidence.",
+    "SWAGGER_UI_DIST": "SIDECAR", "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SERVE_INCLUDE_SCHEMA": False, "COMPONENT_SPLIT_REQUEST": True,
+}

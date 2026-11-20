@@ -1,6 +1,7 @@
 """The document QA pipeline: split, embed, rewrite, retrieve, then cite."""
 
 import json
+import hashlib
 import logging
 import math
 import os
@@ -10,6 +11,7 @@ from functools import lru_cache
 from typing import Literal
 
 import numpy as np
+from django.core.cache import cache
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
@@ -18,6 +20,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel, Field
 
 from .models import Chunk
+from .inventory import asks_for_languages, language_inventory
 
 
 class RAGUnavailable(Exception):
@@ -26,6 +29,10 @@ class RAGUnavailable(Exception):
 
 class UnreadableAnswer(RAGUnavailable):
     """The provider returned text that failed parsing or citation checks."""
+
+
+class RateLimited(RAGUnavailable):
+    """The free providers are currently throttling this key."""
 
 
 EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -212,6 +219,10 @@ def _invoke(instructions, payload, schema, validate=None):
         os.getenv("OPENROUTER_MODEL") or "baidu/ernie-5.5-flash-preview:free",
         os.getenv("OPENROUTER_FALLBACK_MODEL") or "openrouter/free",
     ))
+    cooldown = "openrouter:busy:" + hashlib.sha256(api_key.encode()).hexdigest()
+    busy_message = "ظرفیت یا سهمیهٔ مدل رایگان موقتاً کافی نیست."
+    if cache.get(cooldown):
+        raise RateLimited(busy_message)
     parser = PydanticOutputParser(pydantic_object=schema)
     prompt = ChatPromptTemplate.from_messages([
         ("system", "{instructions}\nReturn only valid JSON.\n{format}"),
@@ -247,6 +258,9 @@ def _invoke(instructions, payload, schema, validate=None):
                 reason = f"سرویس مدل درخواست را با کد {status} رد کرد. تنظیمات و دسترسی مدل را بررسی کنید."
             else:
                 reason = "مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید."
+    if status == 429:
+        cache.set(cooldown, True, timeout=45)
+        raise RateLimited(busy_message)
     if schema is Answer and status is None and isinstance(last_error, ValueError):
         raise UnreadableAnswer(reason)
     raise RAGUnavailable(reason)
@@ -315,6 +329,8 @@ def _checked_answer(result, chunks, language, no_evidence=""):
 
 def answer_question(user, turns, question):
     greeting = " ".join(_tokens(question))
+    if asks_for_languages(greeting):
+        return language_inventory(user, _default_language(question))
     if greeting in {"what are you doing", "what can you do", "how can you help", "help",
                     "چه کار می کنی", "چیکار می کنی", "چه کمکی می کنی", "راهنما"}:
         if _default_language(question) == "en":
@@ -437,4 +453,18 @@ def answer_question(user, turns, question):
                 "cited_titles": list(dict.fromkeys(s["title"] for s in t.sources if s.get("title")))[:4]}
                for t in list(turns)[-4:]]
     chain = RunnableLambda(rewrite) | retrieve | respond
-    return chain.invoke({"history": history, "latest": question})
+    try:
+        return chain.invoke({"history": history, "latest": question})
+    except RateLimited:
+        queries = [question]
+        if history:
+            queries.append(history[-1]["question"] + " " + question)
+        hits = _retrieve(chunks, queries, original=question, neighbors=False)[:3]
+        language = _default_language(question)
+        if not hits:
+            return ABSTAIN[language], []
+        intro = ("مدل رایگان فعلاً در دسترس نیست. این بخش‌ها را جست‌وجوی محلی برای پرسشت پیدا کرد:"
+                 if language == "fa" else "The free model is busy. Local search found these passages:")
+        sources = [dict(document_id=c.document_id, title=c.document.title, location=c.location,
+                        quote=c.text[:300]) for c in hits]
+        return intro + "\n" + "\n".join(f"«{s['quote']}» [{i}]" for i, s in enumerate(sources, 1)), sources

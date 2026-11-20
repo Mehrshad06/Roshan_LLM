@@ -6,11 +6,12 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 
 from . import services
 from .models import Conversation, Document
 from .rag import RAGUnavailable, search_evidence
-from .serializers import (ConversationDetail, ConversationSummary, DocumentDetail,
+from .serializers import (Evidence, PreviewInput, Ticket, ConversationDetail, ConversationSummary, DocumentDetail,
                           DocumentSummary, EditInput, QuestionInput, TurnOutput, UploadInput)
 
 
@@ -28,7 +29,16 @@ class ScopedViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
         return super().handle_exception(exc)
 
 
+@extend_schema_view(
+    list=extend_schema(parameters=[OpenApiParameter("search", str)]),
+    create=extend_schema(request={"multipart/form-data": UploadInput}, responses={201: DocumentDetail}),
+    partial_update=extend_schema(request=EditInput, responses=DocumentDetail),
+)
+@extend_schema(tags=["documents"])
 class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
+    queryset = Document.objects.none()
+
+    @extend_schema(parameters=[OpenApiParameter("q", str, required=True)], responses=Evidence(many=True))
     @action(detail=False, methods=["get"], url_path="search")
     def search(self, request):
         query = request.query_params.get("q", "").strip()
@@ -64,16 +74,22 @@ class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         return Response(DocumentDetail(services.store_document(doc, prepared)).data)
 
 
+@extend_schema_view(create=extend_schema(request=None, responses={201: ConversationSummary}))
+@extend_schema(tags=["conversations"])
 class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
+    queryset = Conversation.objects.none()
+
+    @extend_schema(request=PreviewInput, responses=Ticket)
     @action(detail=True, methods=["post"])
     def preview(self, request, pk=None):
         conversation = self.get_object()
-        form = QuestionInput(data=request.data)
+        form = PreviewInput(data=request.data)
         form.is_valid(raise_exception=True)
         draft = services.prepare_answer(request.user, conversation, form.validated_data["question"],
-                                        request.data.get("replace_id"))
+                                        form.validated_data.get("replace_id"))
         return Response({"ticket": signing.dumps(draft, salt="chat-preview", compress=True)})
 
+    @extend_schema(request=Ticket, responses={201: TurnOutput})
     @action(detail=True, methods=["post"])
     def confirm(self, request, pk=None):
         conversation = self.get_object()
@@ -93,6 +109,7 @@ class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         conversation = Conversation.objects.create(owner=request.user)
         return Response(ConversationSummary(conversation).data, status=201)
 
+    @extend_schema(request=QuestionInput, responses={201: TurnOutput})
     @action(detail=True, methods=["post"])
     def ask(self, request, pk=None):
         conversation = self.get_object()

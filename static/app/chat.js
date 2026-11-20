@@ -29,7 +29,6 @@ function scrollToLatest() {
 
 function sourceList(sources) {
   const details = element("details", "sources");
-  details.open = true;
   details.append(element("summary", "", "منابع پاسخ (" + faNumber.format(sources.length) + ")"));
   for (const [index, item] of sources.entries()) {
     const source = element("div", "source");
@@ -56,7 +55,25 @@ function message(role, text, sources = []) {
   const bubble = element("div", "bubble", text);
   bubble.dir = "auto";
   row.append(element("span", "message-label", role === "user" ? "شما" : "سندیار"), bubble);
-  if (sources.length) row.append(sourceList(sources));
+  if (sources.length) {
+    const details = sourceList(sources);
+    const cards = details.querySelectorAll(".source button");
+    row.append(details);
+    bubble.replaceChildren();
+    for (const part of text.split(/(\[\d+\])/)) {
+      const number = /^\[(\d+)\]$/.exec(part);
+      const card = number && cards[Number(number[1]) - 1];
+      if (card) {
+        const link = element("button", "turn-edit", part);
+        link.type = "button";
+        link.setAttribute("aria-label", "مشاهدهٔ منبع " + number[1]);
+        link.onclick = () => { details.open = true; card.focus(); };
+        bubble.append(link);
+      } else {
+        bubble.append(part);
+      }
+    }
+  }
   return row;
 }
 
