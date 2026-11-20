@@ -43,6 +43,28 @@ class RetrievalTests(TestCase):
             _, excerpts = rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
         self.assertEqual({entry["title"] for entry in excerpts}, {self.owned.title, second.title})
 
+    def test_social_question_from_history_and_greeting_with_document_request(self):
+        self.add_chunk(self.owned, "The deadline is Friday.")
+        with patch.object(rag, "_invoke") as invoke:
+            answer, sources = rag.answer_question(self.user, [], "سلام چطوری ؟")
+            self.assertIn("سلام", answer)
+            self.assertFalse(sources)
+            invoke.assert_not_called()
+            invoke.side_effect = rag.RAGUnavailable("planner called")
+            with self.assertRaisesRegex(rag.RAGUnavailable, "planner called"):
+                rag.answer_question(self.user, [], "سلام، استاد چه مهلتی داده؟")
+
+    def test_second_pass_reads_new_evidence(self):
+        first = self.add_chunk(self.owned, "Orientation.")
+        second = self.add_chunk(self.owned, "The deadline is Friday.", position=4)
+        plan = rag.SearchPlan(standalone="Deadline?", alternative="Due date?", language="en")
+        with (patch.object(rag, "_retrieve", side_effect=[[first], [second]]) as retrieve,
+              patch.object(rag, "_invoke", side_effect=[plan, (rag.ABSTAIN["en"], []),
+                           ("Friday. [1]", [{"quote": second.text}])])):
+            answer, _ = rag.answer_question(self.user, [], "When is it due?")
+        self.assertIn("Friday", answer)
+        self.assertEqual(retrieve.call_args.args[0], [second])
+
     def test_help_and_clock_do_not_search_documents(self):
         self.add_chunk(self.owned, "A list of project requirements.")
         with patch.object(rag, "_invoke", side_effect=AssertionError("unexpected model call")):
