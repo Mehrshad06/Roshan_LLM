@@ -205,3 +205,26 @@ class RetrievalTests(TestCase):
             rag._invoke(rag.GROUND, {}, rag.Answer, selected=selected)
         chat.assert_called_once()
         self.assertEqual(chat.call_args.kwargs["model"], selected.model_id)
+
+    def test_assistant_identity_is_scoped_to_the_chat_and_never_searches_documents(self):
+        model = rag.LanguageModel.objects.get(model_id="deepseek-r1:7b")
+        with patch.object(rag, "owned_chunks", side_effect=AssertionError("unexpected retrieval")):
+            answer, sources = rag.answer_question(self.user, [], "تو چه مدلی هستی؟", model)
+            self.assertIn(model.model_id, answer)
+            self.assertEqual(sources, [])
+            self.assertIn("automatic", rag.answer_question(self.user, [], "What model are you using?")[0])
+        self.assertFalse(rag._asks_model_identity("Which language model does the manual describe?"))
+
+    def test_unverified_assignment_does_not_dump_the_document(self):
+        self.add_chunk(self.owned, "Product overview without assignment details.")
+        plan = rag.SearchPlan(standalone="What is the deadline?", alternative="due date", language="en", intent="assignment")
+        with (patch.object(rag, "_invoke", side_effect=[plan, rag.UnreadableAnswer("unsupported")]),
+              patch.object(rag, "_retrieve", return_value=list(self.owned.chunks.all()))):
+            answer, sources = rag.answer_question(self.user, [], "What is the assignment deadline?")
+        self.assertIn("could not find", answer)
+        self.assertEqual(sources, [])
+
+    def test_unknown_project_code_cannot_borrow_a_similar_projects_answer(self):
+        self.add_chunk(self.owned, "The limit for ALF-27 is 24 MB.")
+        with patch.object(rag, "_invoke", side_effect=AssertionError("unneeded inference")):
+            self.assertEqual(rag.answer_question(self.user, [], "What is the limit for ALF-72?"), (rag.ABSTAIN["en"], []))

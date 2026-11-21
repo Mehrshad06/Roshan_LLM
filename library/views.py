@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.db.models import Q
 from django.shortcuts import render
+from django.utils.crypto import salted_hmac
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
@@ -19,7 +20,10 @@ from .serializers import (ModelChoice, ModelOption, Evidence, PreviewInput, Tick
 @login_required
 @ensure_csrf_cookie
 def dashboard(request):
-    return render(request, "dashboard.html", {"language_models": LanguageModel.objects.all()})
+    # A stable, non-secret browser storage namespace for this login only.
+    chat_session = salted_hmac("workspace-chat", request.session.session_key).hexdigest()
+    return render(request, "dashboard.html", {"language_models": LanguageModel.objects.all(),
+                                              "chat_session": chat_session})
 
 
 class ScopedViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

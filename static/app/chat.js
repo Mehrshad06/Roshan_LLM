@@ -2,18 +2,18 @@ import {api, byId, displayDate, element, faNumber, icon, showError} from "./comm
 import {openDocument} from "./documents.js";
 
 const conversationsUrl = "/api/conversations/";
-const storageKey = "sandyar.conversation." + document.querySelector(".shell").dataset.userId;
+const storageKey = "sandyar.conversation." + document.querySelector(".shell").dataset.chatSession;
 let current = null;
 let pending = false;
 let generating = null;
 let editing = null;
 
 function remember(id) {
-  try { localStorage.setItem(storageKey, String(id)); } catch { /* Storage is optional. */ }
+  try { sessionStorage.setItem(storageKey, String(id)); } catch { /* Storage is optional. */ }
 }
 
 function lastConversation() {
-  try { return localStorage.getItem(storageKey); } catch { return null; }
+  try { return sessionStorage.getItem(storageKey); } catch { return null; }
 }
 
 function setPending(value) {
@@ -196,12 +196,10 @@ async function ask(event) {
 
 async function restoreConversation() {
   const selected = lastConversation();
-  if (selected === "new") return;
+  if (!selected || selected === "new") return;
   setPending(true);
   try {
-    const records = await api(conversationsUrl);
-    const target = records.find((item) => String(item.id) === selected) || records[0];
-    if (target) selectConversation(await api(conversationsUrl + target.id + "/"));
+    selectConversation(await api(conversationsUrl + selected + "/"));
   } catch (err) {
     showError("chat-error", err.message);
   } finally {

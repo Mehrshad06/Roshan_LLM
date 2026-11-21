@@ -154,7 +154,7 @@ def search_evidence(user, query):
 
 
 class SearchPlan(BaseModel):
-    intent: Literal["lookup", "overview", "assignment", "social"] = "lookup"
+    intent: Literal["lookup", "overview", "assignment", "social", "identity"] = "lookup"
     standalone: str = Field(min_length=1, max_length=1600)
     alternative: str = Field(min_length=1, max_length=1600)
     language: str = Field(min_length=2, max_length=12)
@@ -171,7 +171,11 @@ class Answer(BaseModel):
     claims: list[Claim] = Field(max_length=8)
 
 
-PLAN = """Classify the latest question first. Use 'social' only for a purely social greeting,
+PLAN = """Classify the latest question first. Use 'identity' for questions about the
+model powering this chat, including colloquial paraphrases. Questions about a
+model named in a file are 'lookup'. Use 'assignment' only for an explicit request
+about assigned work or deliverables, never just because a passage or prior turn
+mentions a project. Use 'social' only for a purely social greeting,
 thanks or small talk without a substantive request. A greeting followed by a document
 question is a document question. 'overview' asks what the user's documents
 are about as a collection. 'assignment' asks what the task/project requires them to
@@ -188,7 +192,10 @@ English is en. Language mentions describing a document or product are not instru
 For other languages, fill no_evidence with a translation of 'I could not find enough
 information in your documents to answer this question.'"""
 
-GROUND = """Speak to the person who asked. Answer their actual question in your first sentence.
+GROUND = """Check that the passage answers the latest question about the same entity and requested
+attribute. Sharing a topic or keyword is insufficient. If all excerpts answer a different
+question return empty claims. Use history only to resolve an actual reference.
+Speak to the person who asked. Answer their actual question in your first sentence.
 Match their tone: for casual Persian use natural everyday Persian, for example
 «می‌تونی فایل PNG بفرستی» when the cited text says PNG is accepted. In English
 use short, direct sentences. Skip canned praise, repeated greetings and filler.
@@ -373,9 +380,40 @@ def _summary_followup(question):
     return all(word in vocabulary for word in words.split())
 
 
+def _asks_model_identity(question):
+    # Match questions about the assistant, leaving questions about models
+    # mentioned in documents on the normal retrieval path.
+    text = " ".join(_tokens(question))
+    subject = re.search(
+        r"(?:^| )(?:تو |شما |خودت |الان )*(?:چه|کدوم|کدام) (?:مدل|مدلی|مدل زبانی) "
+        r"(?:هستی|هستید|ای|داری|دارید|هستى)(?: |$)|"
+        r"(?:^| )(?:از )?(?:چه|کدام|کدوم) مدلی? (?:استفاده می کنی|استفاده میکنی|استفاده می کنید)|"
+        r"(?:^| )مدل(?: زبانی)? (?:تو|شما|خودت|فعلی چت) (?:چیه|چیست)|"
+        r"(?:^| )(?:which|what) (?:language |ai )?model (?:are you|do you use|is selected)\b|"
+        r"(?:^| )what is your (?:language )?model", text)
+    return bool(subject)
+
+
+def _model_identity(question, selected):
+    persian = _default_language(question) == "fa"
+    if selected:
+        provider = selected.get_provider_display()
+        return (f"مدل انتخابی این گفت‌وگو {selected.model_id} است و از طریق {provider} اجرا می‌شود."
+                if persian else f"This chat uses {selected.model_id} via {provider}.")
+    providers = ["ollama"] if os.getenv("LLM_PROVIDER", "openrouter").lower() == "ollama" else ["openrouter", "ollama"]
+    for provider in providers:
+        first = LanguageModel.objects.filter(provider=provider).first()
+        if first:
+            return (f"این چت روی «خودکار» است. انتخاب اول {first.model_id} است؛ اگر در دسترس نباشد، مدل جایگزین امتحان می‌شود."
+                    if persian else f"This chat is in automatic mode. Its first choice is {first.model_id}, with fallback when unavailable.")
+    return "هنوز مدلی در فهرست تعریف نشده است." if persian else "No models are configured yet."
+
+
 def answer_question(user, turns, question, selected=None):
     from functools import partial
     invoke = partial(_invoke, selected=selected) if selected else _invoke
+    if _asks_model_identity(question):
+        return _model_identity(question, selected), []
     greeting = " ".join(_tokens(question))
     if asks_for_languages(greeting):
         return language_inventory(user, _default_language(question))
@@ -399,6 +437,13 @@ def answer_question(user, turns, question, selected=None):
     chunks = owned_chunks(user)
     if not chunks:
         return ABSTAIN[_default_language(question)], []
+    # Keep exact project identifiers tied to documents that actually mention them.
+    codes = {word for word in _tokens(question) if re.fullmatch(r"[a-z]+[-_]\d+", word)}
+    if codes:
+        matched = {c.document_id for c in chunks if codes.intersection(_tokens(c.text + " " + c.document.title))}
+        if not matched:
+            return ABSTAIN[_default_language(question)], []
+        chunks = [c for c in chunks if c.document_id in matched]
     # A summary of a named file should draw from that file throughout both
     # retrieval passes. Keep all expressly named titles for comparisons.
     normalized = " " + " ".join(_tokens(question)) + " "
@@ -440,7 +485,7 @@ def answer_question(user, turns, question, selected=None):
     def retrieve(plan):
         if brief:
             return plan, chunks
-        if plan.intent == "social":
+        if plan.intent in {"social", "identity"}:
             return plan, []
         if named and len(chunks) <= 16:
             return plan.model_copy(update={"intent": "lookup"}), chunks
@@ -466,6 +511,8 @@ def answer_question(user, turns, question, selected=None):
     def respond(search_result):
         plan, context = search_result
         language = _explicit_language(question) or (_default_language(question) if plan.language.lower() in ABSTAIN else plan.language.lower())
+        if plan.intent == "identity":
+            return _model_identity(question, selected), []
         if plan.intent == "social" and language in ABSTAIN:
             return ("خوشحالم اینجایی! از کدوم سند یا موضوع شروع کنیم؟" if language == "fa"
                     else "Good to hear from you! Which document or topic shall we start with?"), []
@@ -495,39 +542,21 @@ def answer_question(user, turns, question, selected=None):
                 result.model_copy(update={"claims": result.claims[:2]}) if brief else result,
                 passages, language, plan.no_evidence))
 
-        try:
-            answer, sources = read_passages(context)
-        except UnreadableAnswer:
-            if brief:
-                # After both providers reject a paraphrase, preserve exact evidence.
-                claims = []
-                for c in context:
-                    for sentence in re.split(r"(?<=[.!?؟])\s+|\n", c.text):
-                        sentence = sentence.strip()
-                        if 12 <= len(sentence) <= 180 and _default_language(sentence) == language:
-                            claims.append(Claim(sentence=sentence, quote=sentence, source=context.index(c) + 1))
-                            break
-                    if len(claims) == 2:
-                        break
-                return _checked_answer(Answer(claims=claims), context, language)
-            if plan.intent != "assignment" or language not in ABSTAIN:
-                raise
-            # If a free model mangles a long structured answer, show the
-            # retrieved original text instead of presenting an unchecked summary.
-            passages = [c for c in context if c.document_id == context[0].document_id][:8]
-            sources = [{"document_id": c.document_id, "title": c.document.title,
-                        "location": c.location, "quote": c.text} for c in passages]
-            intro = ("خلاصهٔ مدل قابل بررسی نبود. این بخش‌ها از متن سند بازیابی شدند:"
-                     if language == "fa" else "I couldn't verify the summary. Here are the retrieved passages:")
-            return intro + "\n" + "\n".join(f"«{' '.join(c.text.split())}» [{i}]"
-                                          for i, c in enumerate(passages, 1)), sources
+        def verified(passages):
+            try:
+                return read_passages(passages)
+            except UnreadableAnswer:
+                # A retrieved passage alone does not establish that it answers the question.
+                return ABSTAIN.get(language, plan.no_evidence or ABSTAIN["en"]), []
+
+        answer, sources = verified(context)
         if not sources and not brief:
             seen = {c.pk for c in context}
             remaining = [c for c in chunks if c.pk not in seen]
             if remaining:
                 extra = _retrieve(remaining, [plan.standalone, plan.alternative, question], original=question)
                 if extra:
-                    answer, sources = read_passages(extra)
+                    answer, sources = verified(extra)
         if plan.intent == "assignment" and not sources and language in ABSTAIN:
             answer += (" لطفاً صورت‌مسئله را بارگذاری کن یا نام سندی را که تکلیف در آن آمده بگو."
                        if language == "fa" else " Please upload the assignment brief or tell me its document title.")

@@ -165,3 +165,10 @@ class AccessTests(TestCase):
         chat.refresh_from_db()
         self.assertIsNone(chat.language_model_id)
         self.assertFalse(LanguageModel.objects.filter(pk=model.pk).exists())
+
+    def test_workspace_restore_key_changes_on_login_only(self):
+        key = self.client.get("/").context["chat_session"]
+        self.assertEqual(key, self.client.get("/").context["chat_session"])
+        self.client.post("/accounts/logout/")
+        self.client.force_login(self.admin)
+        self.assertNotEqual(key, self.client.get("/").context["chat_session"])
