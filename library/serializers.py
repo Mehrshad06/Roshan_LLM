@@ -77,3 +77,22 @@ class Evidence(serializers.Serializer):
     title = serializers.CharField()
     location = serializers.CharField()
     quote = serializers.CharField()
+
+
+class GraphNode(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    filename = serializers.CharField()
+
+
+class GraphEdge(serializers.Serializer):
+    source = serializers.IntegerField()
+    target = serializers.IntegerField()
+    kind = serializers.ChoiceField(choices=["identifier", "terms", "semantic"])
+    terms = serializers.ListField(child=serializers.CharField())
+    evidence = Evidence(many=True)
+
+
+class DocumentGraph(serializers.Serializer):
+    nodes = GraphNode(many=True)
+    edges = GraphEdge(many=True)

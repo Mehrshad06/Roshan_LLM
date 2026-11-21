@@ -4,6 +4,7 @@
 {% block title %}{% translate 'فضای کار | سندیار' %}{% endblock %}
 {% block language %}{% endblock %}
 {% block content %}
+{% get_current_language as lang %}
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/" aria-label="{% translate 'سندیار، فضای کار' %}"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg></span>{% translate 'سندیار' %}</a>
@@ -44,7 +45,7 @@
         </table>
         <div id="library-empty" class="empty-library" role="status">{% translate 'در حال خواندن اسناد…' %}</div>
       </div>
-      <footer class="library-footer"><span id="doc-count" role="status"></span></footer>
+      <footer class="library-footer"><button id="graph-open" class="secondary-button" type="button">{% if lang == 'en' %}Document graph{% else %}گراف ارتباط اسناد{% endif %}</button> <span id="doc-count" role="status"></span></footer>
     </section>
     <section id="chat" class="chat panel" aria-labelledby="chat-title">
       <header class="chat-header">
@@ -80,6 +81,12 @@
     </section>
   </div>
 </main>
+<dialog id="graph-dialog" class="detail-dialog" aria-labelledby="graph-title">
+  <div class="dialog-head"><h2 id="graph-title">{% if lang == 'en' %}Document graph{% else %}گراف ارتباط اسناد{% endif %}</h2>
+    <button type="button" class="secondary-button" data-close>{% translate 'بستن' %}</button></div>
+  <div class="dialog-body"><label for="graph-focus">{% if lang == 'en' %}Explore connections from{% else %}سند مورد بررسی{% endif %}</label>
+    <select id="graph-focus"></select><div id="graph-links" aria-live="polite"></div></div>
+</dialog>
 <dialog id="upload-dialog" aria-labelledby="upload-title">
   <form id="upload-form">
     <div class="dialog-head"><h2 id="upload-title">{% translate 'افزودن سند' %}</h2><button type="button" class="icon-button" data-close aria-label="{% translate 'بستن' %}"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>

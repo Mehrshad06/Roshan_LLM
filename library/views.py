@@ -10,6 +10,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 
+from .relations import graph
+from .serializers import DocumentGraph
 from . import services
 from .models import Conversation, Document, LanguageModel
 from .rag import RAGUnavailable, search_evidence
@@ -42,6 +44,11 @@ class ScopedViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
 @extend_schema(tags=["documents"])
 class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
     queryset = Document.objects.none()
+
+    @extend_schema(responses=DocumentGraph, summary="Document relationships with supporting passages")
+    @action(detail=False, methods=["get"], url_path="graph")
+    def graph(self, request):
+        return Response(graph(request.user))
 
     @extend_schema(parameters=[OpenApiParameter("q", str, required=True)], responses=Evidence(many=True))
     @action(detail=False, methods=["get"], url_path="search")

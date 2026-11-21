@@ -29,6 +29,27 @@ class RetrievalTests(TestCase):
             text, sources = rag.answer_question(self.user, [], "حداکثر حجم چیست؟ به انگلیسی جواب بده")
         self.assertEqual((text, sources), (rag.ABSTAIN["en"], []))
 
+    def test_related_documents_followup_uses_current_owned_evidence(self):
+        self.owned.filename = "acceptance.xlsx"
+        self.owned.save()
+        other = Document.objects.create(owner=self.user, title="Handover", filename="handover.pdf")
+        self.add_chunk(self.owned, "Approval for ARC-318.")
+        self.add_chunk(other, "Handover of ARC-318.", vector=(0, 1))
+        self.add_chunk(self.other, "Private approval for ARC-318.")
+        turn = self.conversation.turns.create(question="Summarize acceptance.xlsx",
+                                              sources=[{"document_id": self.owned.pk}])
+        question = "این سند با چه سند هایی مرتبط هست؟"
+        answer, sources = rag.answer_question(self.user, [turn], question)
+        self.assertIn("handover.pdf", answer)
+        self.assertIn("ARC-318", answer)
+        self.assertEqual({s["document_id"] for s in sources}, {self.owned.pk, other.pk})
+        self.client.force_login(self.user)
+        graph = self.client.get("/api/documents/graph/").json()
+        self.assertEqual(len(graph["nodes"]), 2)
+        self.assertEqual(len(graph["edges"]), 1)
+        other.delete()
+        self.assertEqual(self.client.get("/api/documents/graph/").json()["edges"], [])
+
     def test_greeting_with_an_empty_library(self):
         answer, sources = rag.answer_question(self.user, [], "سلام!")
         self.assertTrue(answer.startswith("سلام"))

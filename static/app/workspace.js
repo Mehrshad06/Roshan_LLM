@@ -28,3 +28,4 @@ document.querySelectorAll("[data-pane]").forEach((button) => {
 
 initDocuments();
 initChat();
+import "./graph.js";

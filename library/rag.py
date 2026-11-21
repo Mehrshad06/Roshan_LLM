@@ -538,6 +538,10 @@ def _named_summary(user, question, invoke):
 def answer_question(user, turns, question, selected=None):
     from functools import partial
     invoke = partial(_invoke, selected=selected) if selected else _invoke
+    from .relations import relation_answer
+    related = relation_answer(user, turns, question, _default_language(question))
+    if related is not None:
+        return related
     if _asks_model_identity(question):
         return _model_identity(question, selected), []
     greeting = " ".join(_tokens(question))
