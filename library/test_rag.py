@@ -228,3 +228,29 @@ class RetrievalTests(TestCase):
         self.add_chunk(self.owned, "The limit for ALF-27 is 24 MB.")
         with patch.object(rag, "_invoke", side_effect=AssertionError("unneeded inference")):
             self.assertEqual(rag.answer_question(self.user, [], "What is the limit for ALF-72?"), (rag.ABSTAIN["en"], []))
+
+    def test_summary_by_original_filename_with_custom_title(self):
+        self.owned.filename = "system_architecture_en.docx"
+        self.owned.save()
+        self.add_chunk(self.owned, "The worker indexes documents in a background queue.")
+        self.other.filename = self.owned.filename
+        self.other.save()
+        self.add_chunk(self.other, "Another user's architecture.")
+        def summarize(instructions, payload, schema, validate):
+            self.assertEqual(schema, rag.DocumentSummary)
+            self.assertEqual(payload["answer_language"], "fa")
+            self.assertEqual([p["text"] for p in payload["passages"]],
+                             ["The worker indexes documents in a background queue."])
+            return validate(schema(points=[{"sentence": "اسناد در صف پس‌زمینه نمایه می‌شوند.", "source": 1}]))
+        with patch.object(rag, "_invoke", side_effect=summarize):
+            for name in ("system_architecture_en", "system_architecture_en.docx", "SYSTEM ARCHITECTURE EN"):
+                text, sources = rag.answer_question(self.user, [], f"ببین یه فایل هست به اسم {name} بهم خلاصه بگو چی توش نوشته شده")
+                self.assertIn("نمایه", text)
+                self.assertEqual(sources[0]["document_id"], self.owned.pk)
+
+    def test_nonexistent_named_file_cannot_summarize_other_documents(self):
+        self.add_chunk(self.owned, "Some other content")
+        with patch.object(rag, "_invoke", side_effect=AssertionError("unrelated lookup")):
+            answer, sources = rag.answer_question(self.user, [], "missing_file_en را خلاصه کن")
+            self.assertFalse(sources)
+            self.assertIn("نام", answer)
