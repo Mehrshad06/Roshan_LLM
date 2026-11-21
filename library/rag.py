@@ -20,7 +20,7 @@ from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel, Field
 
-from .models import Chunk
+from .models import Chunk, LanguageModel
 from .inventory import asks_for_languages, language_inventory
 
 
@@ -212,31 +212,34 @@ Use an empty claims list only if no part can be answered from the excerpts.
 Never infer a missing fact, figure or causal connection."""
 
 
-def _invoke(instructions, payload, schema, validate=None):
-    provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+def _invoke(instructions, payload, schema, validate=None, selected=None):
+    if selected is not None:
+        return _run_model(selected.provider, instructions, payload, schema, validate, [selected.model_id])
+    provider = os.getenv("LLM_PROVIDER", "openrouter").strip().lower()
     try:
         return _run_model(provider, instructions, payload, schema, validate)
-    except RateLimited:
+    except RAGUnavailable:
+        if provider != "openrouter":
+            raise
         return _run_model("ollama", instructions, payload, schema, validate)
 
 
-def _run_model(provider, instructions, payload, schema, validate):
+def _run_model(provider, instructions, payload, schema, validate, models=None):
+    if models is None:
+        models = list(LanguageModel.objects.filter(provider=provider).values_list("model_id", flat=True))
+    if not models:
+        raise RAGUnavailable(gettext("هیچ مدل فعالی برای این سرویس تعریف نشده است."))
     if provider == "ollama":
-        models = [os.getenv("OLLAMA_MODEL") or "qwen2.5:3b"]
         base_url = os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434/v1"
         api_key = "ollama"
     elif provider == "openrouter":
         api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
         if not api_key:
             raise RAGUnavailable(gettext("کلید OPENROUTER_API_KEY را در فایل .env وارد کنید."))
-        models = dict.fromkeys((
-            os.getenv("OPENROUTER_MODEL") or "baidu/ernie-5.5-flash-preview:free",
-            os.getenv("OPENROUTER_FALLBACK_MODEL") or "openrouter/free",
-        ))
         base_url = "https://openrouter.ai/api/v1"
         cooldown = "openrouter:busy:" + hashlib.sha256(api_key.encode()).hexdigest()
         busy_message = "ظرفیت یا سهمیهٔ مدل رایگان موقتاً کافی نیست."
-        if cache.get(cooldown):
+        if len(models) > 1 and cache.get(cooldown):
             raise RateLimited(busy_message)
     else:
         raise RAGUnavailable("Set LLM_PROVIDER to ollama or openrouter.")
@@ -247,6 +250,7 @@ def _run_model(provider, instructions, payload, schema, validate):
     ]).partial(instructions=instructions, format=parser.get_format_instructions())
     logger = logging.getLogger(__name__)
     inputs = {"payload": json.dumps(payload, ensure_ascii=False)}
+    invalid_answer = None
     for model in models:
         if provider == "openrouter" and not (model.endswith(":free") or model == "openrouter/free"):
             raise RAGUnavailable(gettext("برای مدل اصلی و جایگزین یک مدل رایگان OpenRouter تنظیم کنید."))
@@ -263,12 +267,16 @@ def _run_model(provider, instructions, payload, schema, validate):
         try:
             return chain.invoke(inputs)
         except Exception as exc:
-            last_error = exc
+            if schema is Answer and isinstance(exc, ValueError):
+                invalid_answer = exc
             status = getattr(exc, "status_code", None)
             logger.warning("%s stage=%s model=%s status=%s error=%s",
                            provider, schema.__name__, model, status, type(exc).__name__)
             if provider == "ollama" and (status or type(exc).__name__ in {"APITimeoutError", "APIConnectionError"}):
-                raise RAGUnavailable(gettext("مدل محلی آمادهٔ پاسخ نیست. وضعیت Ollama و دانلود مدل را بررسی کنید.")) from exc
+                reason = gettext("مدل محلی آمادهٔ پاسخ نیست. وضعیت Ollama و دانلود مدل را بررسی کنید.")
+                if type(exc).__name__ == "APIConnectionError":
+                    break
+                continue
             if status == 401:
                 raise RAGUnavailable(gettext("کلید OpenRouter پذیرفته نشد. مقدار و تاریخ انقضای کلید را بررسی کنید.")) from exc
             if status == 429:
@@ -282,8 +290,8 @@ def _run_model(provider, instructions, payload, schema, validate):
     if provider == "openrouter" and status == 429:
         cache.set(cooldown, True, timeout=45)
         raise RateLimited(busy_message)
-    if schema is Answer and status is None and isinstance(last_error, ValueError):
-        raise UnreadableAnswer(reason)
+    if invalid_answer is not None:
+        raise UnreadableAnswer(gettext("مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید.")) from invalid_answer
     raise RAGUnavailable(reason)
 
 
@@ -335,7 +343,7 @@ def _checked_answer(result, chunks, language, no_evidence=""):
                     "location": chunk.location, "quote": found.group()}
         if citation not in sources:
             sources.append(citation)
-        sentences.append(f"{claim.sentence.strip()} [{sources.index(citation) + 1}]")
+        sentences.append(f"{' '.join(claim.sentence.split())} [{sources.index(citation) + 1}]")
     text = "\n".join(sentences)
     if text:
         # A Latin product name or an untranslated code can appear in either language.
@@ -348,7 +356,20 @@ def _checked_answer(result, chunks, language, no_evidence=""):
     return text or ABSTAIN.get(language, no_evidence or ABSTAIN["en"]), sources
 
 
-def answer_question(user, turns, question):
+def _summary_followup(question):
+    # Only a formatting request can reuse the previous topic. A named subject
+    # such as “summarize invoice B” must go through document retrieval.
+    words = " ".join(_tokens(question))
+    if not re.search(r"خلاصه|کوتاه|دو خط|[12] خط|brief|short|summar|two lines|2 lines", words):
+        return False
+    vocabulary = set("خیلی خلاصه خلاصهتر تر خلاصش خلاصهش اش ش کوتاه کن کنش بگو بده بهم برام بنویس لطفا در تو فقط یک دو 1 2 خط جمله جواب پاسخ قبلی رو را همون این اونو همین".split())
+    vocabulary.update("please briefly brief short shorter summarize summarise summary that it this previous answer in just one two 1 2 lines sentences make give me a very".split())
+    return all(word in vocabulary for word in words.split())
+
+
+def answer_question(user, turns, question, selected=None):
+    from functools import partial
+    invoke = partial(_invoke, selected=selected) if selected else _invoke
     greeting = " ".join(_tokens(question))
     if asks_for_languages(greeting):
         return language_inventory(user, _default_language(question))
@@ -380,7 +401,24 @@ def answer_question(user, turns, question):
         if named:
             chunks = [c for c in chunks if c.document.title in named]
 
+    turns = list(turns)
+    brief = bool(turns and not named and _summary_followup(question))
+    if brief:
+        previous = turns[-1]
+        # Re-read only passages actually cited in the previous answer and
+        # still available to this account, even after an edit or deletion.
+        citations = {(s["document_id"], s["location"]): [] for s in previous.sources}
+        for source in previous.sources:
+            citations[source["document_id"], source["location"]].append(source["quote"])
+        chunks = [c for c in chunks if any(q and q in c.text for q in
+                  citations.get((c.document_id, c.location), []))]
+        if not chunks:
+            return ABSTAIN[_default_language(question)], []
+
     def rewrite(payload):
+        if brief:
+            return SearchPlan(standalone=turns[-1].question, alternative=question,
+                              language=_default_language(question))
         normalized = " ".join(_tokens(question))
         common_overviews = {"what are my documents about", "list my documents", "what documents do i have",
                             "چه سندهایی دارم", "چه اسنادی دارم", "سندهایم را معرفی کن", "لیست اسناد من"}
@@ -389,9 +427,11 @@ def answer_question(user, turns, question):
                 r"(?:چه چیز هایی|چه چیزهایی|چه موضوعاتی|چی) (?:هست|هستن|هستند|است|اند)", normalized):
             return SearchPlan(intent="overview", standalone=question, alternative=question,
                               language=_default_language(question))
-        return _invoke(PLAN, payload, SearchPlan)
+        return invoke(PLAN, payload, SearchPlan)
 
     def retrieve(plan):
+        if brief:
+            return plan, chunks
         if plan.intent == "social":
             return plan, []
         if named and len(chunks) <= 16:
@@ -407,9 +447,9 @@ def answer_question(user, turns, question):
             # A short brief often spreads its goal, deliverables and deadline
             # across different pages. Read the whole brief when it fits.
             if hits:
-                brief = [c for c in chunks if c.document_id == hits[0].document_id]
-                if len(brief) <= 16:
-                    hits = brief + [c for c in hits if c.document_id != brief[0].document_id][:4]
+                brief_chunks = [c for c in chunks if c.document_id == hits[0].document_id]
+                if len(brief_chunks) <= 16:
+                    hits = brief_chunks + [c for c in hits if c.document_id != brief_chunks[0].document_id][:4]
             return plan, hits
         # Keep the original wording for exact codes lost in a rewrite.
         context = _retrieve(chunks, [plan.standalone, plan.alternative, question], original=question)
@@ -423,30 +463,45 @@ def answer_question(user, turns, question):
                     else "Good to hear from you! Which document or topic shall we start with?"), []
         if not context:
             return ABSTAIN.get(language, plan.no_evidence or ABSTAIN["en"]), []
-        if plan.intent == "overview" and language in ABSTAIN:
-            # Titles and verbatim excerpts give a dependable catalog even when
-            # the free model is busy. The user can open each cited document.
-            heading = ("در کتابخانه‌ات این سندها را می‌بینم:" if language == "fa"
-                       else "Your library contains these documents:")
-            sources = [{"document_id": c.document_id, "title": c.document.title,
-                        "location": c.location, "quote": c.text[:190].rstrip()} for c in context]
-            lines = [f"• {s['title']} [{i}]\n«{' '.join(s['quote'].split())}»"
-                     for i, s in enumerate(sources, 1)]
-            return "\n".join([heading, *lines]), sources
+        if plan.intent == "overview" and greeting in {"list my documents", "what documents do i have",
+                "چه سندهایی دارم", "چه اسنادی دارم", "لیست اسناد من"}:
+            sources = [dict(document_id=c.document_id, title=c.document.title, location=c.location,
+                            quote=c.text[:190]) for c in context]
+            return "\n".join(f"{s['title']} [{i}]" for i, s in enumerate(sources, 1)), sources
+
         def read_passages(passages):
             excerpts = [
                 {"source": i, "title": c.document.title, "location": c.location,
                  "text": " ".join(c.text.split())}
                 for i, c in enumerate(passages, start=1)
             ]
-            return _invoke(GROUND, {
+            instructions = GROUND
+            if brief:
+                instructions += (" Treat previous_answer as context only, verify everything against the excerpts. Rewrite the preceding topic from these verified passages. "
+                                 "Return at most two short sentences, one per claim. If summarizing a collection, choose two distinct subjects from different files. Use plain, idiomatic language. Cite concrete supporting facts, skip column headers and noisy OCR.")
+            return invoke(instructions, {
                 "intent": plan.intent, "question": plan.standalone, "latest": question,
+                **({"previous_answer": turns[-1].answer[:3200]} if brief else {}),
                 "answer_language": language, "excerpts": excerpts,
-            }, Answer, validate=lambda result: _checked_answer(result, passages, language, plan.no_evidence))
+            }, Answer, validate=lambda result: _checked_answer(
+                result.model_copy(update={"claims": result.claims[:2]}) if brief else result,
+                passages, language, plan.no_evidence))
 
         try:
             answer, sources = read_passages(context)
         except UnreadableAnswer:
+            if brief:
+                # After both providers reject a paraphrase, preserve exact evidence.
+                claims = []
+                for c in context:
+                    for sentence in re.split(r"(?<=[.!?؟])\s+|\n", c.text):
+                        sentence = sentence.strip()
+                        if 12 <= len(sentence) <= 180 and _default_language(sentence) == language:
+                            claims.append(Claim(sentence=sentence, quote=sentence, source=context.index(c) + 1))
+                            break
+                    if len(claims) == 2:
+                        break
+                return _checked_answer(Answer(claims=claims), context, language)
             if plan.intent != "assignment" or language not in ABSTAIN:
                 raise
             # If a free model mangles a long structured answer, show the
@@ -458,7 +513,7 @@ def answer_question(user, turns, question):
                      if language == "fa" else "I couldn't verify the summary. Here are the retrieved passages:")
             return intro + "\n" + "\n".join(f"«{' '.join(c.text.split())}» [{i}]"
                                           for i, c in enumerate(passages, 1)), sources
-        if not sources:
+        if not sources and not brief:
             seen = {c.pk for c in context}
             remaining = [c for c in chunks if c.pk not in seen]
             if remaining:

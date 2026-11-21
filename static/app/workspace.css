@@ -239,3 +239,6 @@ dialog::backdrop { background: #162c28a3; }
 .turn-edit {color:var(--green); background:transparent; padding:.25rem; font-size:.78rem; text-decoration:underline}
 .document-text:has(mark) {white-space:pre-wrap}
 .evidence-highlight {background:#ffe198; border-radius:.2rem}
+
+.model-choice { display:flex; align-items:center; gap:.7rem; padding:.5rem 1rem; font-size:.82rem; border-bottom:1px solid var(--line); }
+.model-choice select { min-width:0; max-width:75%; border:1px solid var(--line); border-radius:.45rem; padding:.25rem; background:var(--surface); color:var(--ink); }

@@ -6,10 +6,11 @@ from django.views.generic import TemplateView
 from rest_framework.routers import SimpleRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from library.views import ConversationViewSet, DocumentViewSet, dashboard
+from library.views import LanguageModelViewSet, ConversationViewSet, DocumentViewSet, dashboard
 from library.accounts import signup
 
 router = SimpleRouter()
+router.register("models", LanguageModelViewSet, basename="language-model")
 router.register("documents", DocumentViewSet, basename="document")
 router.register("conversations", ConversationViewSet, basename="conversation")
 

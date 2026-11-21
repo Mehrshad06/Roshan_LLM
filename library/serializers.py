@@ -1,7 +1,7 @@
 from django.utils.translation import gettext
 from rest_framework import serializers
 
-from .models import Conversation, Document, Turn
+from .models import Conversation, Document, LanguageModel, Turn
 from .services import MAX_TEXT
 
 
@@ -37,10 +37,20 @@ class TurnOutput(serializers.ModelSerializer):
         fields = ["id", "question", "answer", "sources", "created_at"]
 
 
+class ModelOption(serializers.ModelSerializer):
+    class Meta:
+        model = LanguageModel
+        fields = ["id", "name", "provider", "model_id"]
+
+
+class ModelChoice(serializers.Serializer):
+    language_model = serializers.PrimaryKeyRelatedField(queryset=LanguageModel.objects.all(), allow_null=True)
+
+
 class ConversationSummary(serializers.ModelSerializer):
     class Meta:
         model = Conversation
-        fields = ["id", "title", "created_at"]
+        fields = ["id", "title", "created_at", "language_model"]
 
 
 class ConversationDetail(ConversationSummary):

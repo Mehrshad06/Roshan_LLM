@@ -39,9 +39,25 @@ class RetrievalTests(TestCase):
         second = Document.objects.create(owner=self.user, title="گزارش")
         self.add_chunk(second, "Archive handover")
         self.add_chunk(self.other, "Private note")
-        with patch.object(rag, "_invoke", side_effect=AssertionError("unneeded model call")):
-            _, excerpts = rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
-        self.assertEqual({entry["title"] for entry in excerpts}, {self.owned.title, second.title})
+        with patch.object(rag, "_invoke", return_value=("خلاصه", [{"title": second.title}])) as invoke:
+            rag.answer_question(self.user, [], "این ها اسناد چه چیز هایی هست ؟")
+        passages = invoke.call_args.args[1]["excerpts"]
+        self.assertEqual({entry["title"] for entry in passages}, {self.owned.title, second.title})
+
+    def test_two_line_followup_reuses_only_verified_previous_sources(self):
+        c = self.add_chunk(self.owned, "The pilot accepts PNG. It also accepts JPEG.")
+        self.add_chunk(self.other, "Unrelated private note.")
+        turn = self.conversation.turns.create(question="What does the pilot accept?", answer="PNG and JPEG.",
+            sources=[{"document_id": c.document_id, "title": c.document.title, "location": c.location, "quote": "accepts PNG"}])
+        def reply(instructions, payload, schema, validate):
+            self.assertEqual(len(payload["excerpts"]), 1)
+            self.assertEqual(payload["question"], turn.question)
+            result = rag.Claim(sentence="این پایلوت PNG می‌پذیرد.", quote="The pilot accepts PNG.", source=1)
+            return validate(rag.Answer(claims=[result, result, result]))
+        with patch.object(rag, "_invoke", side_effect=reply):
+            answer, sources = rag.answer_question(self.user, [turn], "خیلی خلاصه بهم بگو در 2 خط")
+        self.assertLessEqual(len(answer.splitlines()), 2)
+        self.assertEqual(sources[0]["document_id"], c.document_id)
 
     def test_social_question_from_history_and_greeting_with_document_request(self):
         self.add_chunk(self.owned, "The deadline is Friday.")
@@ -172,7 +188,20 @@ class RetrievalTests(TestCase):
         with self.assertRaises(ValueError):
             rag._checked_answer(result, [chunk], "en")
 
-    def test_missing_key_reports_service_failure(self):
-        self.add_chunk(self.owned, "Sample")
-        with patch.dict(os.environ, {"LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": ""}), self.assertRaises(rag.RAGUnavailable):
-            rag.answer_question(self.user, [], "What is the limit?")
+    def test_missing_key_uses_first_available_local_model(self):
+        class MissingModel(Exception):
+            status_code = 404
+        def missing(prompt):
+            raise MissingModel()
+        with (patch.dict(os.environ, {"LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": ""}),
+              patch.object(rag, "ChatOpenAI", side_effect=[RunnableLambda(missing),
+                  RunnableLambda(lambda prompt: '{"claims": []}')]) as models):
+            rag._invoke(rag.GROUND, {}, rag.Answer)
+        self.assertEqual([call.kwargs["model"] for call in models.call_args_list], ["qwen2.5:3b", "deepseek-r1:7b"])
+
+    def test_manual_model_is_pinned_and_skips_other_providers(self):
+        selected = rag.LanguageModel.objects.filter(provider="ollama").last()
+        with patch.object(rag, "ChatOpenAI", return_value=RunnableLambda(lambda prompt: '{"claims": []}')) as chat:
+            rag._invoke(rag.GROUND, {}, rag.Answer, selected=selected)
+        chat.assert_called_once()
+        self.assertEqual(chat.call_args.kwargs["model"], selected.model_id)

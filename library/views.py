@@ -10,16 +10,16 @@ from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 
 from . import services
-from .models import Conversation, Document
+from .models import Conversation, Document, LanguageModel
 from .rag import RAGUnavailable, search_evidence
-from .serializers import (Evidence, PreviewInput, Ticket, ConversationDetail, ConversationSummary, DocumentDetail,
+from .serializers import (ModelChoice, ModelOption, Evidence, PreviewInput, Ticket, ConversationDetail, ConversationSummary, DocumentDetail,
                           DocumentSummary, EditInput, QuestionInput, TurnOutput, UploadInput)
 
 
 @login_required
 @ensure_csrf_cookie
 def dashboard(request):
-    return render(request, "dashboard.html")
+    return render(request, "dashboard.html", {"language_models": LanguageModel.objects.all()})
 
 
 class ScopedViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -75,7 +75,12 @@ class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         return Response(DocumentDetail(services.store_document(doc, prepared)).data)
 
 
-@extend_schema_view(create=extend_schema(request=None, responses={201: ConversationSummary}))
+class LanguageModelViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = LanguageModel.objects.all()
+    serializer_class = ModelOption
+
+
+@extend_schema_view(create=extend_schema(request=ModelChoice, responses={201: ConversationSummary}))
 @extend_schema(tags=["conversations"])
 class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
     queryset = Conversation.objects.none()
@@ -107,8 +112,19 @@ class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         return ConversationDetail if self.action == "retrieve" else ConversationSummary
 
     def create(self, request):
-        conversation = Conversation.objects.create(owner=request.user)
+        form = ModelChoice(data=request.data, partial=True)
+        form.is_valid(raise_exception=True)
+        conversation = Conversation.objects.create(owner=request.user, **form.validated_data)
         return Response(ConversationSummary(conversation).data, status=201)
+
+    @extend_schema(request=ModelChoice, responses=ConversationSummary)
+    def partial_update(self, request, pk=None):
+        conversation = self.get_object()
+        form = ModelChoice(data=request.data)
+        form.is_valid(raise_exception=True)
+        conversation.language_model = form.validated_data["language_model"]
+        conversation.save(update_fields=["language_model"])
+        return Response(ConversationSummary(conversation).data)
 
     @extend_schema(request=QuestionInput, responses={201: TurnOutput})
     @action(detail=True, methods=["post"])

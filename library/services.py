@@ -61,12 +61,13 @@ def prepare_answer(user, conversation, question, replace_id=None):
     latest = history[-1].pk if history else None
     if replace_id is not None and latest != replace_id:
         raise Conflict(gettext("فقط آخرین پیام گفت‌وگو قابل ویرایش است."))
-    answer, sources = rag.answer_question(user, history[:-1] if replace_id else history, question)
+    previous = history[:-1] if replace_id else history
+    answer, sources = rag.answer_question(user, previous, question, selected=conversation.language_model)
     filenames = dict(Document.objects.filter(owner=user, pk__in=[s["document_id"] for s in sources])
                      .values_list("pk", "filename"))
     sources = [dict(s, filename=filenames.get(s["document_id"], "")) for s in sources]
     return dict(user_id=user.pk, conversation_id=conversation.pk, latest=latest, replace_id=replace_id,
-                question=question, answer=answer, sources=sources)
+                language_model_id=conversation.language_model_id, question=question, answer=answer, sources=sources)
 
 
 def save_answer(user, conversation, draft):
@@ -75,7 +76,7 @@ def save_answer(user, conversation, draft):
     question, answer, sources = draft["question"], draft["answer"], draft["sources"]
     with transaction.atomic():
         current = Conversation.objects.filter(pk=conversation.pk, owner=user).first()
-        if not current or current.turns.order_by("-pk").values_list("pk", flat=True).first() != draft["latest"]:
+        if not current or current.language_model_id != draft.get("language_model_id") or current.turns.order_by("-pk").values_list("pk", flat=True).first() != draft["latest"]:
             raise Conflict(gettext("این گفت‌وگو تغییر کرد. آن را باز کنید و پرسش را دوباره بفرستید."))
         for source in sources:
             if not Chunk.objects.filter(document__owner=user, document_id=source["document_id"],

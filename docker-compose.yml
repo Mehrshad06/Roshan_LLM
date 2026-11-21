@@ -4,9 +4,6 @@ services:
     env_file: .env
     environment:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434/v1}
-    depends_on:
-      model-init:
-        condition: service_completed_successfully
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -19,6 +16,13 @@ services:
       start_period: 20s
 
   ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     image: ollama/ollama:0.13.5
     volumes:
       - ollama_models:/root/.ollama
@@ -38,8 +42,13 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OLLAMA_FALLBACK_MODEL: ${OLLAMA_FALLBACK_MODEL-deepseek-r1:7b}
     entrypoint: ["/bin/sh", "-ec"]
-    command: ['ollama show "$$OLLAMA_MODEL" >/dev/null 2>&1 || exec ollama pull "$$OLLAMA_MODEL"']
+    command:
+      - |
+        for model in "$$OLLAMA_MODEL" "$$OLLAMA_FALLBACK_MODEL"; do
+          [ -z "$$model" ] || ollama show "$$model" >/dev/null 2>&1 || ollama pull "$$model"
+        done
     restart: on-failure:3
 
 volumes:

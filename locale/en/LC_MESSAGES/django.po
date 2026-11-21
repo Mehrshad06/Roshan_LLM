@@ -31,6 +31,9 @@ msgstr "Last modified"
 msgid "آخرین ویرایش"
 msgstr "Last edited"
 
+msgid "ارائه‌دهنده"
+msgstr "Provider"
+
 msgid "ارتباط با سرور برقرار نشد. اتصال را بررسی و دوباره تلاش کنید."
 msgstr "Could not reach the server. Check your connection and try again."
 
@@ -60,6 +63,9 @@ msgstr "What does Alefba extract?"
 
 msgid "انصراف"
 msgstr "Cancel"
+
+msgid "اولویت"
+msgstr "Priority"
 
 msgid "اولین درخواست"
 msgstr "First request"
@@ -202,6 +208,9 @@ msgstr "Understanding errors"
 msgid "خواندن متن کامل، ویرایش"
 msgstr "Read the full text, update"
 
+msgid "خودکار"
+msgstr "Automatic"
+
 msgid "داده هم‌زمان تغییر کرده است؛ دوباره آن را بخوانید."
 msgstr "The data changed. Reload and try again."
 
@@ -307,6 +316,12 @@ msgstr "Start a new conversation"
 msgid "شما"
 msgstr "You"
 
+msgid "شناسهٔ مدل"
+msgstr "Model ID"
+
+msgid "شناسهٔ مدل نامعتبر است."
+msgstr "Invalid model ID."
+
 msgid "شواهد"
 msgstr "Evidence"
 
@@ -409,11 +424,17 @@ msgstr "Full document text"
 msgid "مدل جست‌وجوی محلی در دسترس نیست. اتصال دانلود اولیه و مسیر کش مدل را بررسی کنید."
 msgstr "Local search is unavailable. Check the embedding model download and cache path."
 
+msgid "مدل زبانی"
+msgstr "Language model"
+
 msgid "مدل محلی آمادهٔ پاسخ نیست. وضعیت Ollama و دانلود مدل را بررسی کنید."
 msgstr "The local model is unavailable. Check Ollama and the model download."
 
 msgid "مدل پاسخ قابل بررسی نداد. پرسش را دوباره بفرستید یا دقیق‌تر بنویسید."
 msgstr "The answer could not be verified. Try asking again or add a detail."
+
+msgid "مدل‌های زبانی"
+msgstr "Language models"
 
 msgid "مدیریت"
 msgstr "Administration"
@@ -448,6 +469,9 @@ msgstr "Document name"
 msgid "نام فایل"
 msgstr "Filename"
 
+msgid "نام مدل"
+msgstr "Display name"
+
 msgid "نام کاربری"
 msgstr "Username"
 
@@ -468,6 +492,9 @@ msgstr "Your library is empty. Choose “Add documents” to start."
 
 msgid "هنوز گفت‌وگویی ثبت نشده است."
 msgstr "No conversations yet."
+
+msgid "هیچ مدل فعالی برای این سرویس تعریف نشده است."
+msgstr "No models are configured for this provider."
 
 msgid "و"
 msgstr "and"
@@ -564,6 +591,12 @@ msgstr "or"
 
 msgid "یک سند را بارگذاری کنید، بخش مرتبط را پیدا کنید و پاسخ مستند بگیرید."
 msgstr "Upload a document, find a passage and ask a question with evidence."
+
+msgid "یک مدل رایگان OpenRouter انتخاب کنید."
+msgstr "Select a free OpenRouter model."
+
+msgid "یک مدل محلی Ollama انتخاب کنید."
+msgstr "Select a local Ollama model."
 
 msgid "یک یا چند فایل را انتخاب کنید یا اینجا رها کنید"
 msgstr "Choose files or drop them here"

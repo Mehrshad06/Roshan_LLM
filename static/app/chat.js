@@ -18,7 +18,7 @@ function lastConversation() {
 
 function setPending(value) {
   pending = value;
-  for (const id of ["question", "send", "history", "new-chat"]) byId(id).disabled = value;
+  for (const id of ["question", "send", "chat-model", "history", "new-chat"]) byId(id).disabled = value;
   byId("ask-form").setAttribute("aria-busy", String(value));
 }
 
@@ -104,6 +104,7 @@ function selectConversation(record) {
   editing = null;
   byId("edit-notice").hidden = true;
   current = record;
+  byId("chat-model").value = record?.language_model ?? "";
   byId("conversation-title").textContent = record?.title || gettext("گفت‌وگوی جدید");
   byId("conversation-title").dir = "auto";
   byId("question").value = "";
@@ -164,7 +165,7 @@ async function ask(event) {
   scrollToLatest();
   try {
     if (!current) {
-      current = await api(conversationsUrl, "POST", {});
+      current = await api(conversationsUrl, "POST", {language_model: byId("chat-model").value || null});
       current.turns = [];
       remember(current.id);
     }
@@ -209,6 +210,21 @@ async function restoreConversation() {
 }
 
 export function initChat() {
+  const picker = byId("chat-model");
+  picker.onchange = async () => {
+    if (!current) return;
+    setPending(true);
+    try {
+      const record = await api(conversationsUrl + current.id + "/", "PATCH", {language_model: picker.value || null});
+      current.language_model = record.language_model;
+      showError("chat-error");
+    } catch (err) {
+      picker.value = current.language_model ?? "";
+      showError("chat-error", err.message);
+    } finally {
+      setPending(false);
+    }
+  };
   byId("cancel-answer").onclick = () => generating?.abort();
   byId("discard-edit").onclick = () => {
     if (pending) return;

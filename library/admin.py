@@ -11,7 +11,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 
 from . import services
-from .models import Conversation, Document, Turn
+from .models import Conversation, Document, LanguageModel, Turn
 from .rag import RAGUnavailable
 
 admin.site.site_header = gettext("روشن | مدیریت کتابخانه")
@@ -69,9 +69,15 @@ class DocumentAdmin(OwnedAdmin):
         services.store_document(obj, form.prepared, is_new=not change)
 
 
+@admin.register(LanguageModel)
+class LanguageModelAdmin(admin.ModelAdmin):
+    list_display = ["name", "provider", "model_id", "priority"]
+    list_filter = ["provider"]
+
+
 @admin.register(Conversation)
 class ConversationAdmin(OwnedAdmin):
-    fields = ["title"]
+    fields = ["title", "language_model"]
     list_display = ["title", "created_at"]
 
     def save_model(self, request, obj, form, change):

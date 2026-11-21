@@ -8,7 +8,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from . import services
-from .models import Chunk, Conversation, Document, Turn
+from .models import Chunk, Conversation, Document, LanguageModel, Turn
 
 
 class AccessTests(TestCase):
@@ -128,3 +128,21 @@ class AccessTests(TestCase):
             self.assertEqual(confirm(ticket).status_code, 201)
             self.assertEqual(confirm(ticket).status_code, 409)
             self.assertEqual(list(chat.turns.values_list("question", flat=True)), ["Edited"])
+
+    def test_model_selection_is_private_and_removing_model_restores_automatic(self):
+        model = LanguageModel.objects.filter(provider="ollama").first()
+        options = self.api.get("/api/models/").json()
+        self.assertIn(model.pk, [option["id"] for option in options])
+        created = self.api.post("/api/conversations/", {"language_model": model.pk}, format="json")
+        self.assertEqual(created.status_code, 201)
+        url = f"/api/conversations/{created.json()['id']}/"
+        self.assertEqual(self.api.get(url).json()["language_model"], model.pk)
+        with patch("library.rag.answer_question", return_value=("answer", [])) as answer:
+            self.api.post(url + "ask/", {"question": "Question"}, format="json")
+            self.assertEqual(answer.call_args.kwargs["selected"], model)
+        self.assertEqual(self.api.patch(url, {"language_model": 9999}, format="json").status_code, 400)
+        self.assertEqual(self.api.patch(f"/api/conversations/{self.private_chat.pk}/",
+                                        {"language_model": model.pk}, format="json").status_code, 404)
+        model.delete()
+        self.assertIsNone(self.api.get(url).json()["language_model"])
+        self.assertNotIn(model.model_id, [m["model_id"] for m in self.api.get("/api/models/").json()])

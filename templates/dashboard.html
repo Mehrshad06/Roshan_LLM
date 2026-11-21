@@ -52,6 +52,12 @@
         <div class="chat-heading"><h2 id="chat-title">{% translate 'دستیار اسناد' %}</h2><p id="conversation-title">{% translate 'گفت‌وگوی جدید' %}</p></div>
         <div class="chat-actions"><button class="icon-button" id="history" aria-label="{% translate 'تاریخچهٔ گفت‌وگوها' %}" title="{% translate 'تاریخچهٔ گفت‌وگوها' %}"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></button><button class="icon-button" id="new-chat" aria-label="{% translate 'گفت‌وگوی جدید' %}" title="{% translate 'گفت‌وگوی جدید' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button></div>
       </header>
+      <label class="model-choice" for="chat-model">{% translate 'مدل زبانی' %}
+        <select id="chat-model">
+          <option value="">{% translate 'خودکار' %}</option>
+          {% for model in language_models %}<option value="{{ model.pk }}">{{ model.name }}</option>{% endfor %}
+        </select>
+      </label>
       <div class="chat-scroll" id="chat-scroll">
         <div class="chat-welcome" id="chat-welcome">
           <span class="welcome-symbol" aria-hidden="true"><svg class="icon"><use href="#i-quote"/></svg></span>
