@@ -164,8 +164,11 @@ def _retrieve(chunks, queries, *, original=None, neighbors=True, weights=None):
     return list(context.values())
 
 
-def owned_chunks(user):
-    return list(Chunk.objects.filter(document__owner=user).select_related("document")
+def owned_chunks(user, document_id=None):
+    chunks = Chunk.objects.filter(document__owner=user)
+    if document_id is not None:
+        chunks = chunks.filter(document_id=document_id)
+    return list(chunks.select_related("document")
                 .only("document__title", "position", "location", "text", "vector")
                 .order_by("document_id", "position"))
 
@@ -492,7 +495,7 @@ def _summary_extract(passages, language):
     return "\n".join(lines), sources
 
 
-def _named_summary(user, question, invoke):
+def _named_summary(user, question, invoke, document_id=None):
     if not re.search(r"خلا[ ‌]*ص[ ‌]*ه|چکیده|مختصر|جمع[ ‌-]?بندی|چی نوشته|چی گفته|چه گفته|summari[sz]e|summary|overview of|what.{0,16}(?:file|document).{0,16}about", question, re.I):
         return None
 
@@ -500,7 +503,7 @@ def _named_summary(user, question, invoke):
         return " ".join(re.findall(r"[^\W_]+", text.casefold().translate(_NORMALIZE)))
 
     query = " " + words(question) + " "
-    docs = user.document_set.values_list("pk", "title", "filename")
+    docs = user.document_set.values_list("pk", "title", "filename") if document_id is None else ()
     # An explicit full filename is more specific than its stem (e.g. two versions
     # with the same stem but different extensions).
     full, aliases = [], []
@@ -510,7 +513,7 @@ def _named_summary(user, question, invoke):
         elif any(" " + alias + " " in query for alias in
                  (words(title), words(Path(filename).stem)) if alias):
             aliases.append(pk)
-    ids = full or aliases
+    ids = [document_id] if document_id is not None else full or aliases
     language = _default_language(question)
     if not ids:
         # An explicit file-like identifier should never switch to another document.
@@ -564,11 +567,11 @@ def _named_summary(user, question, invoke):
         return _summary_extract(passages, language)
 
 
-def answer_question(user, turns, question, selected=None):
+def answer_question(user, turns, question, selected=None, document_id=None):
     from functools import partial
     invoke = partial(_invoke, selected=selected) if selected else _invoke
     from .relations import relation_answer
-    related = relation_answer(user, turns, question, _default_language(question))
+    related = relation_answer(user, turns, question, _default_language(question), document_id)
     if related is not None:
         return related
     if _asks_model_identity(question):
@@ -577,7 +580,7 @@ def answer_question(user, turns, question, selected=None):
     inventory_query = question.casefold()
     for directive in _language_directives(question):
         inventory_query = inventory_query.replace(directive.group(), " ")
-    if asks_for_languages(" ".join(_tokens(inventory_query))):
+    if document_id is None and asks_for_languages(" ".join(_tokens(inventory_query))):
         return language_inventory(user, _default_language(question))
     if greeting in {"what are you doing", "what can you do", "how can you help", "help",
                     "چه کار می کنی", "چیکار می کنی", "چه کمکی می کنی", "راهنما"}:
@@ -596,10 +599,10 @@ def answer_question(user, turns, question, selected=None):
             return "Hello! Which document would you like to explore? I can also give you an overview of your library.", []
         return "سلام! خوش اومدی. دوست داری با هم یه نگاه کلی به سندها بندازیم یا بریم سراغ یه سؤال مشخص؟", []
     # Ownership filtering happens before embedding comparisons or LLM calls.
-    summary = _named_summary(user, question, invoke)
+    summary = _named_summary(user, question, invoke, document_id)
     if summary is not None:
         return summary
-    chunks = owned_chunks(user)
+    chunks = owned_chunks(user, document_id)
     if not chunks:
         return ABSTAIN[_default_language(question)], []
     # Keep exact project identifiers tied to documents that actually mention them.
@@ -657,6 +660,11 @@ def answer_question(user, turns, question, selected=None):
                 if len(brief_chunks) <= 16:
                     hits = brief_chunks + [c for c in hits if c.document_id != brief_chunks[0].document_id][:4]
             return plan, hits
+        # For a small, explicitly selected file, keep row order and the header
+        # together. A question like "the second test" has no searchable identifier.
+        if document_id and len(chunks) <= 8 and re.search(
+                r"ردیف|آزمون (?:اول|دوم|سوم)|سطر|row|first|second|third", question, re.I):
+            return plan, chunks
         # Keep the original wording for exact codes lost in a rewrite.
         weights = _feedback_weights(user, question, chunks)
         context = _retrieve(chunks, [plan.standalone, plan.alternative, question], original=question, weights=weights)

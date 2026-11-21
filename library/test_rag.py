@@ -83,6 +83,35 @@ class RetrievalTests(TestCase):
             answer, _ = rag.answer_question(self.user, [], "برای OCR-614 چند صفحه ثبت شده؟ به انگلیسی جواب بده")
         self.assertEqual(answer, "48 pages [1]")
 
+    def test_document_scoped_summary_and_citation_section(self):
+        self.client.force_login(self.user)
+        self.add_chunk(self.owned, "Archive receipts take two days.")
+        self.add_chunk(self.other, "Private records.")
+        url = f"/api/conversations/{self.conversation.pk}/ask/"
+        payload = {"document": self.owned.pk, "question": "Summarize this file"}
+        turn = self.client.post(url, payload, content_type="application/json")
+        self.assertEqual(turn.status_code, 201)
+        self.assertEqual(turn.json()["document"], self.owned.pk)
+        self.assertEqual([e["document_id"] for e in turn.json()["sources"]], [self.owned.pk])
+        payload["document"] = self.other.pk
+        self.assertEqual(self.client.post(url, payload, content_type="application/json").status_code, 404)
+        detail = self.client.get(f"/api/documents/{self.owned.pk}/", {"location": "Page 1"}).json()
+        self.assertEqual(detail["passages"], ["Archive receipts take two days."])
+
+    def test_ambiguous_project_and_followup_choice(self):
+        from .services import ask
+        self.owned.title, self.owned.filename = "Project brief", "brief.pdf"
+        self.owned.save()
+        pilot = Document.objects.create(owner=self.user, filename="pilot.docx", title="Project pilot")
+        turn = ask(self.user, self.conversation, "پروژه از ما چی می‌خواد؟")
+        self.assertEqual({d["id"] for d in turn.choices}, {self.owned.pk, pilot.pk})
+        self.assertFalse(turn.sources)
+        with patch.object(rag, "answer_question", return_value=("ok", [])) as answer:
+            chosen = ask(self.user, self.conversation, "brief.pdf")
+        self.assertEqual(chosen.document_id, self.owned.pk)
+        self.assertEqual(answer.call_args.args[2], turn.question)
+        self.assertEqual(answer.call_args.kwargs["document_id"], self.owned.pk)
+
     def test_greeting_with_an_empty_library(self):
         answer, sources = rag.answer_question(self.user, [], "سلام!")
         self.assertTrue(answer.startswith("سلام"))

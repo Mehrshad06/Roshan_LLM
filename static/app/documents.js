@@ -62,6 +62,12 @@ async function loadDocuments() {
   try {
     const query = new URLSearchParams({search: byId("search").value.trim()});
     documents = await api("/api/documents/?" + query, "GET", undefined, searchRequest.signal);
+    if (!query.get("search")) {
+      const picker = byId("chat-document");
+      const selected = picker.value;
+      picker.replaceChildren(picker.options[0], ...documents.map(doc => new Option(doc.filename, doc.id)));
+      picker.value = selected;
+    }
     renderDocuments();
   } catch (err) {
     if (err.name === "AbortError") return;
@@ -75,6 +81,7 @@ function setEditMode(mode) {
   const editing = mode === "edit";
   byId("detail-text").hidden = editing;
   byId("edit-form").hidden = !editing;
+  byId("ask-document").hidden = !reading || !currentDocument;
   byId("start-edit").hidden = !reading;
   byId("start-delete").hidden = !reading;
   byId("save-edit").hidden = !editing;
@@ -100,7 +107,7 @@ function renderDetail(doc) {
   setEditMode("read");
 }
 
-export async function openDocument(id, quote = "") {
+export async function openDocument(id, quote = "", location = "") {
   const dialog = byId("detail-dialog");
   detailRequest?.abort();
   detailRequest = new AbortController();
@@ -113,17 +120,31 @@ export async function openDocument(id, quote = "") {
   byId("start-delete").hidden = true;
   if (!dialog.open) dialog.showModal();
   try {
-    const doc = await api("/api/documents/" + id + "/", "GET", undefined, detailRequest.signal);
+    const section = location ? "?" + new URLSearchParams({location}) : "";
+    const doc = await api("/api/documents/" + id + "/" + section, "GET", undefined, detailRequest.signal);
     renderDetail(doc);
     if (quote) {
+      if (location) byId("detail-meta").append(" · ", location);
+      const passage = doc.passages?.find(text => text.includes(quote));
+      const text = byId("detail-text");
+      if (doc.passages && !passage) {
+        byId("detail-status").textContent = gettext("متن سند از زمان این پاسخ تغییر کرده است.");
+        return;
+      }
+      const mark = element("mark", "evidence-highlight", quote);
       const start = doc.text.indexOf(quote);
       if (start >= 0 && doc.text.indexOf(quote, start + 1) === -1) {
-        const mark = element("mark", "evidence-highlight", quote);
-        byId("detail-text").replaceChildren(doc.text.slice(0, start), mark, doc.text.slice(start + quote.length));
-        mark.scrollIntoView({block: "center"});
+        text.replaceChildren(doc.text.slice(0, start), mark, doc.text.slice(start + quote.length));
+      } else if (passage) {
+        const excerpt = element("blockquote", "source");
+        const offset = passage.indexOf(quote);
+        excerpt.append(passage.slice(0, offset), mark, passage.slice(offset + quote.length));
+        text.prepend(excerpt);
       } else {
         byId("detail-status").textContent = start < 0 ? gettext("متن سند از زمان این پاسخ تغییر کرده است.") : gettext("این عبارت در چند جای سند آمده است.");
+        return;
       }
+      mark.scrollIntoView({block: "center"});
     }
   } catch (err) {
     if (err.name === "AbortError") return;
@@ -148,6 +169,10 @@ async function changeDocument(method, data) {
   try {
     const result = await api("/api/documents/" + currentDocument.id + "/", method, data);
     if (method === "DELETE") {
+      const picker = byId("chat-document");
+      const active = picker.value === String(currentDocument.id);
+      Array.from(picker.options).find(o => o.value === String(currentDocument.id))?.remove();
+      if (active) picker.dispatchEvent(new Event("change"));
       byId("detail-dialog").close();
     } else {
       renderDetail(result);
@@ -210,6 +235,18 @@ async function uploadDocument(event) {
 }
 
 export function initDocuments() {
+  byId("ask-document").onclick = () => {
+    if (!currentDocument || byId("chat-document").disabled) return;
+    const picker = byId("chat-document");
+    if (!Array.from(picker.options).some(o => o.value === String(currentDocument.id))) {
+      picker.add(new Option(currentDocument.filename, currentDocument.id));
+    }
+    picker.value = String(currentDocument.id);
+    picker.dispatchEvent(new Event("change"));
+    byId("detail-dialog").close();
+    document.querySelector('[data-pane="chat"]').click();
+    byId("question").focus();
+  };
   let timeout;
   byId("search").addEventListener("input", () => {
     clearTimeout(timeout);

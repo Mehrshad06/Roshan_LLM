@@ -25,6 +25,7 @@ def dashboard(request):
     # A stable, non-secret browser storage namespace for this login only.
     chat_session = salted_hmac("workspace-chat", request.session.session_key).hexdigest()
     return render(request, "dashboard.html", {"language_models": LanguageModel.objects.all(),
+                                              "documents": request.user.document_set.only("filename").order_by("filename", "pk"),
                                               "chat_session": chat_session})
 
 
@@ -66,6 +67,14 @@ class DocumentViewSet(mixins.DestroyModelMixin, ScopedViewSet):
             if term:
                 docs = docs.filter(Q(title__icontains=term) | Q(text__icontains=term) | Q(filename__icontains=term))
         return docs
+
+    @extend_schema(parameters=[OpenApiParameter("location", str, description="Include current passages from this cited section.")])
+    def retrieve(self, request, pk=None):
+        doc = self.get_object()
+        location = request.query_params.get("location")
+        if location:
+            doc.passages = list(doc.chunks.filter(location=location).order_by("position").values_list("text", flat=True))
+        return Response(DocumentDetail(doc).data)
 
     def get_serializer_class(self):
         return DocumentSummary if self.action == "list" else DocumentDetail
@@ -113,7 +122,7 @@ class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         form = PreviewInput(data=request.data)
         form.is_valid(raise_exception=True)
         draft = services.prepare_answer(request.user, conversation, form.validated_data["question"],
-                                        form.validated_data.get("replace_id"))
+                                        form.validated_data.get("replace_id"), form.validated_data.get("document"))
         return Response({"ticket": signing.dumps(draft, salt="chat-preview", compress=True)})
 
     @extend_schema(request=Ticket, responses={201: TurnOutput})
@@ -153,5 +162,5 @@ class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
         conversation = self.get_object()
         form = QuestionInput(data=request.data)
         form.is_valid(raise_exception=True)
-        turn = services.ask(request.user, conversation, form.validated_data["question"])
+        turn = services.ask(request.user, conversation, form.validated_data["question"], form.validated_data.get("document"))
         return Response(TurnOutput(turn).data, status=201)

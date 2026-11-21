@@ -12,8 +12,10 @@ class DocumentSummary(serializers.ModelSerializer):
 
 
 class DocumentDetail(DocumentSummary):
+    passages = serializers.ListField(child=serializers.CharField(), read_only=True, required=False)
+
     class Meta(DocumentSummary.Meta):
-        fields = [*DocumentSummary.Meta.fields, "text"]
+        fields = [*DocumentSummary.Meta.fields, "text", "passages"]
 
 
 class UploadInput(serializers.Serializer):
@@ -34,7 +36,7 @@ class EditInput(serializers.Serializer):
 class TurnOutput(serializers.ModelSerializer):
     class Meta:
         model = Turn
-        fields = ["id", "question", "answer", "sources", "rating", "created_at"]
+        fields = ["id", "question", "answer", "sources", "document", "choices", "rating", "created_at"]
 
 
 class ModelOption(serializers.ModelSerializer):
@@ -61,6 +63,7 @@ class ConversationDetail(ConversationSummary):
 
 
 class QuestionInput(serializers.Serializer):
+    document = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     question = serializers.CharField(max_length=3000)
 
 

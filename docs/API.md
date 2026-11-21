@@ -97,3 +97,5 @@ curl.exe -u demo "http://localhost:8000/api/conversations/$($chat.id)/"
 `GET /api/documents/graph/` returns owned document nodes and undirected edges with a reason and two cited passages.
 
 `PUT /api/conversations/{id}/turns/{turn_id}/rating/` accepts `{"rating": 1}` for a like, `-1` for a dislike and `0` to clear. The conversation owner can replace their vote. The current rating is included with each turn.
+
+The optional integer `document` on `ask/` and `preview/` scopes a question to an owned document. Null searches the library. A turn includes its document ID and any clarification choices. For an ambiguous project request, submit the original question with the chosen document ID, or reply with its filename. The document detail endpoint accepts `?location=...` to return the current passages in a cited section.

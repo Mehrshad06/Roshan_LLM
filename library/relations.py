@@ -60,7 +60,7 @@ def graph(user):
     return dict(nodes=nodes, edges=[edge for _, edge in sorted(edges, key=lambda item: item[0], reverse=True)])
 
 
-def relation_answer(user, turns, question, language):
+def relation_answer(user, turns, question, language, anchor_id=None):
     q = question.casefold().replace("\u200c", " ")
     if not (re.search(r"مرتبط|ارتباط|رابطه|شباهت|مشابه|related|relationships?|similar|connected", q)
             and re.search(r"سند|اسناد|فایل|documents?|files?|\.pdf|\.docx|\.xlsx|\.txt", q)):
@@ -70,7 +70,7 @@ def relation_answer(user, turns, question, language):
     explicit = [i for i, n in nodes.items() if any(
         re.search(r"(?<!\w)" + re.escape(name.casefold()) + r"(?!\w)", q)
         for name in (n["filename"], n["title"], Path(n["filename"]).stem) if name)]
-    ids = set(explicit)
+    ids = {anchor_id} & nodes.keys() if anchor_id else set(explicit)
     if not ids and not re.search(r"\b[\w-]+\.(pdf|docx|xlsx|txt|png|jpe?g)\b", q):
         history = list(turns)
         if history:

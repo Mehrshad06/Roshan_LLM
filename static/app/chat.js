@@ -18,7 +18,7 @@ function lastConversation() {
 
 function setPending(value) {
   pending = value;
-  for (const id of ["question", "send", "chat-model", "history", "new-chat"]) byId(id).disabled = value;
+  for (const id of ["question", "send", "chat-model", "chat-document", "history", "new-chat"]) byId(id).disabled = value;
   byId("ask-form").setAttribute("aria-busy", String(value));
 }
 
@@ -36,7 +36,7 @@ function sourceList(sources) {
     title.type = "button";
     title.dir = "auto";
     title.title = gettext("مشاهدهٔ سند منبع");
-    title.addEventListener("click", () => openDocument(item.document_id, item.quote));
+    title.addEventListener("click", () => openDocument(item.document_id, item.quote, item.location));
     const location = element("small", "", item.location.replace(/^Page (\d+)/, gettext("صفحهٔ $1"))
       .replace("Document body", gettext("متن اصلی سند")).replace(" · Row ", gettext(" · ردیف ")));
     location.dir = "auto";
@@ -67,7 +67,7 @@ function message(role, text, sources = []) {
         const link = element("button", "turn-edit", part);
         link.type = "button";
         link.setAttribute("aria-label", gettext("مشاهدهٔ منبع ") + number[1]);
-        link.onclick = () => { details.open = true; card.focus(); };
+        link.onclick = () => card.click();
         bubble.append(link);
       } else {
         bubble.append(part);
@@ -118,6 +118,7 @@ function renderTurns(turns) {
       edit.onclick = () => {
         if (pending) return;
         editing = turn.id;
+        byId("chat-document").value = turn.document || "";
         byId("edit-notice").hidden = false;
         byId("question").value = turn.question;
         byId("question").focus();
@@ -125,6 +126,21 @@ function renderTurns(turns) {
       userMessage.append(edit);
     }
     const reply = message("assistant", turn.answer, turn.sources);
+    if (turn === turns.at(-1)) {
+      for (const choice of turn.choices || []) {
+        const button = element("button", "suggestion", choice.filename);
+        button.type = "button";
+        button.onclick = () => {
+          if (pending) return;
+          const picker = byId("chat-document");
+          picker.value = choice.id;
+          if (!picker.value) return;
+          byId("question").value = turn.question;
+          byId("ask-form").requestSubmit();
+        };
+        reply.append(button);
+      }
+    }
     reply.append(ratingControls(turn));
     nodes.push(userMessage, reply);
   }
@@ -137,6 +153,11 @@ function selectConversation(record) {
   editing = null;
   byId("edit-notice").hidden = true;
   current = record;
+  const picker = byId("chat-document");
+  picker.value = record?.turns?.at(-1)?.document || "";
+  if (record) {
+    try { picker.value = sessionStorage.getItem(storageKey + ".scope." + record.id) ?? picker.value; } catch {}
+  }
   byId("chat-model").value = record?.language_model ?? "";
   byId("conversation-title").textContent = record?.title || gettext("گفت‌وگوی جدید");
   byId("conversation-title").dir = "auto";
@@ -202,10 +223,12 @@ async function ask(event) {
       current.turns = [];
       remember(current.id);
     }
+    const scope = byId("chat-document").value;
+    try { sessionStorage.setItem(storageKey + ".scope." + current.id, scope); } catch {}
     const base = conversationsUrl + current.id + "/";
     generating = new AbortController();
     byId("cancel-answer").hidden = false;
-    const preview = await api(base + "preview/", "POST", {question, replace_id: editing}, generating.signal);
+    const preview = await api(base + "preview/", "POST", {question, replace_id: editing, document: scope || null}, generating.signal);
     generating = null;
     byId("cancel-answer").hidden = true;
     const turn = await api(base + "confirm/", "POST", {ticket: preview.ticket});
@@ -241,6 +264,11 @@ async function restoreConversation() {
 }
 
 export function initChat() {
+  byId("chat-document").onchange = () => {
+    if (current) {
+      try { sessionStorage.setItem(storageKey + ".scope." + current.id, byId("chat-document").value); } catch {}
+    }
+  };
   const picker = byId("chat-model");
   picker.onchange = async () => {
     if (!current) return;
