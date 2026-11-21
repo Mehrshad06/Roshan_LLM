@@ -50,6 +50,39 @@ class RetrievalTests(TestCase):
         other.delete()
         self.assertEqual(self.client.get("/api/documents/graph/").json()["edges"], [])
 
+    def test_rating_is_scoped_reversible_and_reranks_only_current_evidence(self):
+        question = "What documents describe archive review?"
+        first = self.add_chunk(self.owned, "Archive review includes catalog checks.")
+        second = self.add_chunk(self.owned, "Archive review includes receipt checks.", position=1)
+        cited = dict(document_id=self.owned.pk, title=self.owned.title, location=second.location, quote=second.text)
+        turn = self.conversation.turns.create(question=question, answer="Receipt checks.", sources=[cited])
+        url = f"/api/conversations/{self.conversation.pk}/turns/{turn.pk}/rating/"
+        self.client.force_login(self.other.owner)
+        self.assertEqual(self.client.put(url, {"rating": 1}, content_type="application/json").status_code, 404)
+        self.client.force_login(self.user)
+        for rating, preferred in [(1, second), (-1, first), (0, first)]:
+            response = self.client.put(url, {"rating": rating}, content_type="application/json")
+            self.assertEqual(response.json(), {"rating": rating})
+            weights = rag._feedback_weights(self.user, question, [first, second])
+            with patch.object(rag, "_vectors", return_value=np.array([[1, 0]])):
+                hits = rag._retrieve([first, second], [question], weights=weights, neighbors=False)
+            self.assertEqual(hits[0], preferred)
+            self.assertEqual(rag._feedback_weights(self.other.owner, question, [first, second]), {})
+        self.assertEqual(self.client.put(url, {"rating": 2}, content_type="application/json").status_code, 400)
+        turn.rating = 1
+        turn.save()
+        second.text = "Entirely revised."
+        self.assertEqual(rag._feedback_weights(self.user, question, [second]), {})
+        self.assertEqual(rag._feedback_weights(self.user, "How many pages?", [first, second]), {})
+
+    def test_output_language_request_does_not_trigger_language_inventory(self):
+        self.add_chunk(self.owned, "Limit is 48 pages for OCR-614.")
+        plan = rag.SearchPlan(standalone="How many pages for OCR-614?", alternative="OCR-614 pages", language="en")
+        with patch.object(rag, "_invoke", side_effect=[plan, ("48 pages [1]", [{"quote": "48 pages"}])]), \
+             patch.object(rag, "_retrieve", return_value=list(self.owned.chunks.all())):
+            answer, _ = rag.answer_question(self.user, [], "برای OCR-614 چند صفحه ثبت شده؟ به انگلیسی جواب بده")
+        self.assertEqual(answer, "48 pages [1]")
+
     def test_greeting_with_an_empty_library(self):
         answer, sources = rag.answer_question(self.user, [], "سلام!")
         self.assertTrue(answer.startswith("سلام"))

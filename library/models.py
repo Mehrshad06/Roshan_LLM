@@ -75,6 +75,7 @@ class Conversation(models.Model):
 
 
 class Turn(models.Model):
+    rating = models.SmallIntegerField(default=0, choices=[(-1, "Dislike"), (0, "Unrated"), (1, "Like")])
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="turns")
     question = models.TextField(gettext("پرسش"))
     answer = models.TextField(gettext("پاسخ"))

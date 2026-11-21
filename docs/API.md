@@ -95,3 +95,5 @@ curl.exe -u demo "http://localhost:8000/api/conversations/$($chat.id)/"
 
 `GET /api/models/` فهرست مدل‌های قابل انتخاب را برمی‌گرداند. هنگام ایجاد گفت‌وگو با `POST /api/conversations/` می‌توانید شناسهٔ مدل را در `language_model` بفرستید. برای تغییر آن از `PATCH /api/conversations/{id}/` با بدنهٔ `{"language_model": 2}` استفاده کنید. مقدار `null` انتخاب خودکار را فعال می‌کند. مدیریت فهرست مدل‌ها از پنل Django Admin انجام می‌شود.
 `GET /api/documents/graph/` returns owned document nodes and undirected edges with a reason and two cited passages.
+
+`PUT /api/conversations/{id}/turns/{turn_id}/rating/` accepts `{"rating": 1}` for a like, `-1` for a dislike and `0` to clear. The conversation owner can replace their vote. The current rating is included with each turn.

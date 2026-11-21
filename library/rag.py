@@ -21,7 +21,7 @@ from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel, Field
 
-from .models import Chunk, LanguageModel
+from .models import Chunk, LanguageModel, Turn
 from .inventory import asks_for_languages, language_inventory
 
 
@@ -108,7 +108,32 @@ def _bm25(query, counts, document_frequency, lengths, average):
     return scores
 
 
-def _retrieve(chunks, queries, *, original=None, neighbors=True):
+def _feedback_weights(user, query, chunks):
+    """Use ratings as a bounded tie-breaker among already relevant passages."""
+    words = set(_tokens(query))
+    contextual = re.search(r"حجمش|اسمش|این (?:فایل|سند)|همون|\b(?:it|its|this|that|these|those)\b", query, re.I)
+    if len(words) < 3 or contextual:
+        return {}
+    votes = Turn.objects.filter(conversation__owner=user).exclude(rating=0).order_by("-pk")
+    by_location = {}
+    for chunk in chunks:
+        by_location.setdefault((chunk.document_id, chunk.location), []).append(chunk)
+    weights = Counter()
+    codes = {w for w in words if re.fullmatch(r"[a-z]+[-_]\d+", w)}
+    for question, rating, sources in votes.values_list("question", "rating", "sources")[:100]:
+        previous = set(_tokens(question))
+        previous_codes = {w for w in previous if re.fullmatch(r"[a-z]+[-_]\d+", w)}
+        overlap = len(words & previous) / len(words | previous)
+        if overlap < 0.65 or previous_codes != codes:
+            continue
+        matched = {c.pk for s in sources for c in by_location.get((s.get("document_id"), s.get("location")), [])
+                   if s.get("quote") and s["quote"] in c.text}
+        for key in matched:
+            weights[key] += rating * overlap
+    return {key: max(-1, min(1, weight)) for key, weight in weights.items()}
+
+
+def _retrieve(chunks, queries, *, original=None, neighbors=True, weights=None):
     """Reciprocal rank fusion of cosine and BM25 results; add adjacent chunks."""
     queries = list(dict.fromkeys(queries))
     corpus = np.array([chunk.vector for chunk in chunks], dtype=np.float32)
@@ -129,7 +154,7 @@ def _retrieve(chunks, queries, *, original=None, neighbors=True):
     # Keep an exact project code above semantically similar projects, even if
     # the planner translated or omitted the code in its alternative query.
     codes = {t for t in _tokens(original or "") if re.fullmatch(r"[a-z]+[-_]\d+", t)}
-    ranked = sorted(fused, key=lambda i: (len(codes.intersection(counts[i])), fused[i]), reverse=True)
+    ranked = sorted(fused, key=lambda i: (len(codes.intersection(counts[i])), fused[i] * (1 + 0.15 * (weights or {}).get(chunks[i].pk, 0))), reverse=True)
     for index in ranked[:4]:
         hit = chunks[index]
         for offset in ((0, -1, 1) if neighbors else (0,)):
@@ -318,7 +343,7 @@ def _run_model(provider, instructions, payload, schema, validate, models=None):
     raise RAGUnavailable(reason)
 
 
-def _explicit_language(text):
+def _language_directives(text):
     """Recognize common directives even if the planner overlooks them."""
     languages = r"(english|persian|farsi|انگلیسی|فارسی)"
     patterns = [
@@ -327,7 +352,11 @@ def _explicit_language(text):
         rf"(?:به\s+(?:زبان\s+)?)?{languages}\s+(?:جواب|پاسخ|بگو|بنویس|توضیح\s+بده|حرف\s+بزن|صحبت\s+کن|بده)",
         rf"(?:پاسخ|جواب)(?:ت|تان|\s+را)?\s+(?:به\s+)?(?:زبان\s+)?{languages}(?:\s|$)",
     ]
-    matches = [m for pattern in patterns for m in re.finditer(pattern, text.casefold())]
+    return [m for pattern in patterns for m in re.finditer(pattern, text.casefold())]
+
+
+def _explicit_language(text):
+    matches = _language_directives(text)
     if matches:
         name = max(matches, key=lambda m: m.start()).group(1)
         return "en" if name in ("english", "انگلیسی") else "fa"
@@ -545,7 +574,10 @@ def answer_question(user, turns, question, selected=None):
     if _asks_model_identity(question):
         return _model_identity(question, selected), []
     greeting = " ".join(_tokens(question))
-    if asks_for_languages(greeting):
+    inventory_query = question.casefold()
+    for directive in _language_directives(question):
+        inventory_query = inventory_query.replace(directive.group(), " ")
+    if asks_for_languages(" ".join(_tokens(inventory_query))):
         return language_inventory(user, _default_language(question))
     if greeting in {"what are you doing", "what can you do", "how can you help", "help",
                     "چه کار می کنی", "چیکار می کنی", "چه کمکی می کنی", "راهنما"}:
@@ -626,7 +658,8 @@ def answer_question(user, turns, question, selected=None):
                     hits = brief_chunks + [c for c in hits if c.document_id != brief_chunks[0].document_id][:4]
             return plan, hits
         # Keep the original wording for exact codes lost in a rewrite.
-        context = _retrieve(chunks, [plan.standalone, plan.alternative, question], original=question)
+        weights = _feedback_weights(user, question, chunks)
+        context = _retrieve(chunks, [plan.standalone, plan.alternative, question], original=question, weights=weights)
         return plan, context
 
     def respond(search_result):

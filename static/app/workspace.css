@@ -249,3 +249,7 @@ dialog::backdrop { background: #162c28a3; }
 .graph-branch details { margin: .4rem 0 .6rem; }
 .graph-branch summary { cursor: pointer; }
 .graph-branch blockquote { white-space: pre-wrap; overflow-wrap: anywhere; margin: .4rem 0 1rem; }
+
+.answer-rating { display: flex; gap: .4rem; }
+.answer-rating button { border: 1px solid transparent; border-radius: .55rem; padding: .2rem .55rem; }
+.answer-rating button[aria-pressed="true"] { background: #e3eee9; border-color: #417562; }

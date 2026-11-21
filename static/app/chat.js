@@ -77,6 +77,37 @@ function message(role, text, sources = []) {
   return row;
 }
 
+function ratingControls(turn) {
+  const group = element("div", "answer-rating");
+  const en = document.documentElement.lang.startsWith("en");
+  const choices = [[1, en ? "Helpful" : "پاسخ درست بود", "👍"], [-1, en ? "Incorrect" : "پاسخ نادرست بود", "👎"]];
+  const conversationId = current.id;
+  for (const [value, label, icon] of choices) {
+    const button = element("button", "turn-edit", icon);
+    button.type = "button";
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-pressed", String(turn.rating === value));
+    button.onclick = async () => {
+      for (const item of group.children) item.disabled = true;
+      try {
+        const result = await api(conversationsUrl + conversationId + "/turns/" + turn.id + "/rating/",
+                                 "PUT", {rating: turn.rating === value ? 0 : value});
+        turn.rating = result.rating;
+        for (const [index, item] of Array.from(group.children).entries()) {
+          item.setAttribute("aria-pressed", String(turn.rating === choices[index][0]));
+        }
+      } catch (err) {
+        if (current?.id === conversationId) showError("chat-error", err.message);
+      } finally {
+        for (const item of group.children) item.disabled = false;
+      }
+    };
+    group.append(button);
+  }
+  return group;
+}
+
 function renderTurns(turns) {
   const nodes = [];
   for (const turn of turns) {
@@ -93,7 +124,9 @@ function renderTurns(turns) {
       };
       userMessage.append(edit);
     }
-    nodes.push(userMessage, message("assistant", turn.answer, turn.sources));
+    const reply = message("assistant", turn.answer, turn.sources);
+    reply.append(ratingControls(turn));
+    nodes.push(userMessage, reply);
   }
   byId("messages").replaceChildren(...nodes);
   byId("chat-welcome").hidden = turns.length > 0;

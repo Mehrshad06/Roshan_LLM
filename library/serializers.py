@@ -34,7 +34,7 @@ class EditInput(serializers.Serializer):
 class TurnOutput(serializers.ModelSerializer):
     class Meta:
         model = Turn
-        fields = ["id", "question", "answer", "sources", "created_at"]
+        fields = ["id", "question", "answer", "sources", "rating", "created_at"]
 
 
 class ModelOption(serializers.ModelSerializer):
@@ -96,3 +96,7 @@ class GraphEdge(serializers.Serializer):
 class DocumentGraph(serializers.Serializer):
     nodes = GraphNode(many=True)
     edges = GraphEdge(many=True)
+
+
+class AnswerRating(serializers.Serializer):
+    rating = serializers.ChoiceField(choices=[-1, 0, 1])

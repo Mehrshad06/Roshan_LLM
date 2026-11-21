@@ -2,7 +2,7 @@ from django.utils.translation import gettext
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.db.models import Q
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.utils.crypto import salted_hmac
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import mixins, viewsets
@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 
 from .relations import graph
-from .serializers import DocumentGraph
+from .serializers import AnswerRating, DocumentGraph
 from . import services
 from .models import Conversation, Document, LanguageModel
 from .rag import RAGUnavailable, search_evidence
@@ -95,6 +95,16 @@ class LanguageModelViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 @extend_schema(tags=["conversations"])
 class ConversationViewSet(mixins.DestroyModelMixin, ScopedViewSet):
     queryset = Conversation.objects.none()
+
+    @extend_schema(request=AnswerRating, responses=AnswerRating)
+    @action(detail=True, methods=["put"], url_path=r"turns/(?P<turn_id>[0-9]+)/rating")
+    def rate(self, request, pk=None, turn_id=None):
+        turn = get_object_or_404(self.get_object().turns, pk=turn_id)
+        form = AnswerRating(data=request.data)
+        form.is_valid(raise_exception=True)
+        turn.rating = form.validated_data["rating"]
+        turn.save(update_fields=["rating"])
+        return Response({"rating": turn.rating})
 
     @extend_schema(request=PreviewInput, responses=Ticket)
     @action(detail=True, methods=["post"])
