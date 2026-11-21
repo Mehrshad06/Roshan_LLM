@@ -254,3 +254,23 @@ class RetrievalTests(TestCase):
             answer, sources = rag.answer_question(self.user, [], "missing_file_en را خلاصه کن")
             self.assertFalse(sources)
             self.assertIn("نام", answer)
+
+    def test_short_persian_scan_summarizes_both_sentences_without_model(self):
+        self.owned.title = "تبدیل گفتار با حرف"
+        self.owned.save()
+        self.add_chunk(self.owned, "حرف سامانهٔ تبدیل گفتار به متن روشن است.\nمتن پیاده‌شده را می‌توان جستجو و ویرایش کرد.")
+        with patch.object(rag, "_invoke", side_effect=AssertionError("unnecessary model call")):
+            answer, sources = rag.answer_question(self.user, [], "بهم بگو داخل تبدیل گفتار با حرف به صورت خلاصه چه چیزی گفته شده")
+        self.assertIn("تبدیل گفتار", answer)
+        self.assertIn("ویرایش", answer)
+        self.assertTrue(all(s["quote"] in self.owned.chunks.first().text for s in sources))
+
+    def test_invalid_summary_returns_short_owned_passages(self):
+        first = self.add_chunk(self.owned, "Upload the scanned pages before indexing starts.")
+        last = self.add_chunk(self.owned, "Review the transcript after indexing finishes.", position=1)
+        self.add_chunk(self.other, "THIS IS PRIVATE.")
+        with patch.object(rag, "_invoke", side_effect=rag.UnreadableAnswer("invalid source number")):
+            answer, sources = rag.answer_question(self.user, [], "Summarize Alfba manual")
+        self.assertIn(first.text, answer)
+        self.assertIn(last.text, answer)
+        self.assertEqual({s["document_id"] for s in sources}, {self.owned.pk})

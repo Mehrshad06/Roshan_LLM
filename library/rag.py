@@ -421,8 +421,50 @@ def _model_identity(question, selected):
     return "هنوز مدلی در فهرست تعریف نشده است." if persian else "No models are configured yet."
 
 
+def _summary_extract(passages, language):
+    """Select short, verbatim evidence when a generated summary cannot be used."""
+    candidates = []
+    seen = set()
+    for chunk in passages:
+        for raw in re.split(r"(?<=[.!?؟؛])\s+|\n+", chunk.text):
+            # A table or a long paragraph may have no sentence punctuation.
+            quote = raw.strip()[:300].rstrip()
+            if len(raw.strip()) > 300 and " " in quote:
+                quote = quote.rsplit(" ", 1)[0]
+            key = " ".join(quote.casefold().split())
+            if key and key not in seen:
+                candidates.append((chunk, quote))
+                seen.add(key)
+    if not candidates:
+        return "", []
+    preferred = [item for item in candidates if _default_language(item[1]) == language]
+    pool = preferred or candidates
+    substantive = [item for item in pool if len(_tokens(item[1])) >= 4]
+    pool = substantive or pool
+    # Cover different sections first, then fill remaining space in reading order.
+    chosen, sections = [], set()
+    for idx, (chunk, quote) in enumerate(pool):
+        section = (chunk.document_id, chunk.location)
+        if section not in sections:
+            sections.add(section)
+            chosen.append(idx)
+        if len(chosen) == 3:
+            break
+    remaining = [i for i in range(len(pool)) if i not in chosen]
+    chosen.extend(remaining[:3 - len(chosen)])
+    sources, lines = [], []
+    for i in sorted(chosen):
+        chunk, quote = pool[i]
+        sources.append(dict(document_id=chunk.document_id, title=chunk.document.title,
+                            location=chunk.location, quote=quote))
+        lines.append(f"{quote} [{len(sources)}]")
+    if not preferred:
+        lines.insert(0, "نکات اصلی به زبان اصلی سند:" if language == "fa" else "Key passages in the original language:")
+    return "\n".join(lines), sources
+
+
 def _named_summary(user, question, invoke):
-    if not re.search(r"خلاصه|جمع[ ‌-]?بندی|چی نوشته|چی گفته|چه گفته|summari[sz]e|summary|overview of|what.{0,16}(?:file|document).{0,16}about", question, re.I):
+    if not re.search(r"خلا[ ‌]*ص[ ‌]*ه|چکیده|مختصر|جمع[ ‌-]?بندی|چی نوشته|چی گفته|چه گفته|summari[sz]e|summary|overview of|what.{0,16}(?:file|document).{0,16}about", question, re.I):
         return None
 
     def words(text):
@@ -454,6 +496,13 @@ def _named_summary(user, question, invoke):
     if not passages:
         return ("سند را پیدا کردم، اما متن قابل خواندن برای خلاصه‌سازی ندارد."
                 if language == "fa" else "I found the document, but it has no readable indexed text."), []
+    # A short document already in the answer language is its own grounded summary.
+    # Return both sentences of a short scan instead of asking an LLM to copy them.
+    if len(passages) == 1 and len(passages[0].text.strip()) <= 200:
+        raw = passages[0].text.strip()
+        if _default_language(raw) == language and all(
+                _default_language(line) == language for line in raw.splitlines() if line.strip()):
+            return _summary_extract(passages, language)
     if len(passages) > 20:
         passages = [passages[i * (len(passages) - 1) // 19] for i in range(20)]
 
@@ -461,9 +510,16 @@ def _named_summary(user, question, invoke):
         claims = []
         for point in summary.points:
             if point.source > len(passages):
-                raise ValueError("Unknown summary source")
+                continue
             quote = passages[point.source - 1].text[:420]
-            claims.append(Claim(sentence=point.sentence, source=point.source, quote=quote))
+            claim = Claim(sentence=point.sentence, source=point.source, quote=quote)
+            try:
+                _checked_answer(Answer(claims=[claim]), passages, language)
+            except ValueError:
+                continue
+            claims.append(claim)
+        if not claims:
+            raise ValueError("No verifiable summary point")
         return _checked_answer(Answer(claims=claims), passages, language)
 
     try:
@@ -475,9 +531,8 @@ def _named_summary(user, question, invoke):
             "passages": [{"source": i, "filename": c.document.filename, "text": c.text[:420]}
                          for i, c in enumerate(passages, 1)],
         }, DocumentSummary, validate=check)
-    except UnreadableAnswer:
-        return ("سند را پیدا کردم، اما نتوانستم خلاصهٔ مدل را با متن آن تأیید کنم."
-                if language == "fa" else "I found the document, but couldn't verify the model's summary against its text."), []
+    except RAGUnavailable:
+        return _summary_extract(passages, language)
 
 
 def answer_question(user, turns, question, selected=None):
