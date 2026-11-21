@@ -188,7 +188,13 @@ English is en. Language mentions describing a document or product are not instru
 For other languages, fill no_evidence with a translation of 'I could not find enough
 information in your documents to answer this question.'"""
 
-GROUND = """Respond as a friendly tutor. Start with a direct answer in everyday language.
+GROUND = """Speak to the person who asked. Answer their actual question in your first sentence.
+Match their tone: for casual Persian use natural everyday Persian, for example
+«می‌تونی فایل PNG بفرستی» when the cited text says PNG is accepted. In English
+use short, direct sentences. Skip canned praise, repeated greetings and filler.
+In a follow-up, resolve “it” from the preceding topic and give only the new detail.
+When comparing products, check the subject of each supporting quote. Never
+assign a feature from one product to a different one, even in a short summary.
 For a document summary, explain the actual subject and the useful facts together.
 Do not turn a test-data label into the main point. OCR may contain garbled words:
 use a clear sentence elsewhere in the passage (including its other language) when
@@ -378,11 +384,13 @@ def answer_question(user, turns, question, selected=None):
         if _default_language(question) == "en":
             return "I can search your documents, show where an answer comes from, or give you a library overview. Which would you like?", []
         return "می‌توانم سندهایت را معرفی کنم یا جواب یک پرسش را همراه با جملهٔ پشتیبان پیدا کنم. از کدام شروع کنیم؟", []
+    if greeting in {"مرسی", "دمت گرم", "ممنون", "خیلی ممنون", "ممنونم", "thanks", "thank you", "thanks a lot"}:
+        return ("خواهش می‌کنم!" if _default_language(question) == "fa" else "You’re welcome!"), []
     if greeting in {"what time is it", "what is the time", "ساعت چنده", "الان ساعت چنده"}:
         if _default_language(question) == "en":
             return "For your current local time, check your device clock. I can look up a time recorded in one of your documents.", []
         return "برای ساعت محلی، ساعت دستگاهت را ببین. اگر منظورت زمان ثبت‌شده در یک سند است، بگو کدام رویداد را پیدا کنم.", []
-    if greeting in {"سلام", "درود", "سلام وقت بخیر", "سلام خوبی", "سلام چطوری",
+    if greeting in {"سلام خوبی چه خبر", "سلام چه خبر", "سلام چطوری چه خبر", "hey how are you", "سلام", "درود", "سلام وقت بخیر", "سلام خوبی", "سلام چطوری",
                     "سلام چطوری خوبی", "خوبی", "چطوری", "hi", "hello", "hey", "how are you"}:
         if _default_language(question) == "en":
             return "Hello! Which document would you like to explore? I can also give you an overview of your library.", []

@@ -58,6 +58,7 @@ class Command(BaseCommand):
             permissions = Permission.objects.filter(content_type__app_label="library", codename__in=[
                 "add_document", "view_document", "change_document", "delete_document",
                 "view_conversation", "view_turn", "add_turn",
+                "view_languagemodel", "add_languagemodel", "change_languagemodel", "delete_languagemodel",
             ])
             users["demo"].user_permissions.add(*permissions)
         if options["accounts_only"]:

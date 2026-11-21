@@ -146,3 +146,22 @@ class AccessTests(TestCase):
         model.delete()
         self.assertIsNone(self.api.get(url).json()["language_model"])
         self.assertNotIn(model.model_id, [m["model_id"] for m in self.api.get("/api/models/").json()])
+
+    def test_demo_admin_can_manage_models_without_becoming_superuser(self):
+        from django.core.management import call_command
+        from io import StringIO
+        with patch.dict("os.environ", {"DEMO_PASSWORD": "for-tests", "REVIEWER_PASSWORD": "for-tests"}):
+            call_command("seed_demo", accounts_only=True, stdout=StringIO())
+        demo = get_user_model().objects.get(username="demo")
+        self.assertFalse(demo.is_superuser)
+        self.client.force_login(demo)
+        url = "/admin/library/languagemodel/"
+        self.assertContains(self.client.get("/admin/"), url)
+        data = {"name": "Extra model", "provider": "ollama", "model_id": "sample:3b", "priority": 8}
+        self.assertEqual(self.client.post(url + "add/", data).status_code, 302)
+        model = LanguageModel.objects.get(model_id="sample:3b")
+        chat = Conversation.objects.create(owner=self.other, language_model=model)
+        self.assertEqual(self.client.post(f"{url}{model.pk}/delete/", {"post": "yes"}).status_code, 302)
+        chat.refresh_from_db()
+        self.assertIsNone(chat.language_model_id)
+        self.assertFalse(LanguageModel.objects.filter(pk=model.pk).exists())
